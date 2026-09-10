@@ -1,0 +1,26 @@
+# Données : régénérables depuis la source, jamais versionnées.
+# On garde l'arborescence (les .gitkeep) pour qu'un clone neuf ait les dossiers.
+data/**
+!data/**/
+!data/**/.gitkeep
+
+# Environnement
+.env
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# dbt
+dbt/**/target/
+dbt/**/dbt_packages/
+dbt/**/logs/
+
+# Outils
+.playwright-mcp/
+.DS_Store

@@ -1,0 +1,23 @@
+# Ingestion
+requests==2.32.3
+
+# Manipulation et stockage des données
+pandas==2.2.3
+pyarrow==17.0.0
+duckdb==1.5.5
+
+# Couche gold
+dbt-core==1.12.4
+dbt-duckdb==1.11.0
+
+# Enrichissement : client compatible OpenAI (LM Studio, Ollama)
+openai==1.54.4
+python-dotenv==1.0.1
+
+# Restitution
+streamlit==1.40.1
+plotly==5.24.1
+
+# Qualité
+pytest==8.3.3
+ruff==0.7.4
