@@ -180,6 +180,80 @@ musicales en comptent 36. Le score global d'une IA sera donc fortement
 influencé par sa connaissance des jeux vidéo — une limite à garder en tête au
 moment de lire les résultats.
 
+### « Leonardo da Vinci. » et « Leonardo da Vinci » ne sont pas la même chose
+
+**Le problème.** Pour décider si l'IA a bon, il faut comparer sa réponse à la
+bonne réponse. Un ordinateur compare caractère par caractère : un point final,
+une majuscule ou un accent suffisent à le faire répondre « c'est différent ».
+
+**Pourquoi ça bloquait.** Une IA qui répond juste mais formule autrement aurait
+été comptée fausse. Toutes les IA auraient paru bien plus mauvaises qu'elles ne
+le sont, et rien ne l'aurait signalé : le rapport aurait simplement affiché des
+chiffres trop bas, d'apparence crédible.
+
+**Ce qu'on a fait.** Cinq règles appliquées l'une après l'autre, de la plus
+stricte à la plus tolérante : égalité exacte une fois la ponctuation et les
+accents mis de côté ; reconnaissance des « oui / non / vrai / faux » ;
+identification de l'option choisie quand l'IA fait une phrase ; enfin tolérance
+aux fautes de frappe. La règle qui a tranché est enregistrée à côté de chaque
+réponse, pour qu'on puisse vérifier après coup.
+
+Le principe : **en cas de doute réel, on compte faux**. Un benchmark qui
+surestime trompe davantage qu'un benchmark qui sous-estime.
+
+### « Dark Red » contient « Red »
+
+**Le problème.** Quand l'IA fait une phrase, on cherche laquelle des réponses
+proposées elle a citée. Si on en trouve plusieurs, on ne peut pas savoir ce
+qu'elle a choisi, donc on compte faux. Mais « Dark Red » contient « Red » : la
+bonne réponse déclenchait deux détections et se voyait rejetée.
+
+**Pourquoi ça bloquait.** L'erreur n'était pas aléatoire. Elle frappait
+uniquement les questions dont les réponses proposées s'emboîtent — certaines
+catégories seraient donc apparues beaucoup plus difficiles qu'elles ne le sont,
+et on en aurait tiré de fausses conclusions sur les points faibles des modèles.
+
+**Ce qu'on a fait.** On cherche désormais chaque réponse comme un mot entier
+(« 1979 » ne se trouve plus dans « 11979 »), et quand deux propositions se
+superposent au même endroit du texte, la plus longue gagne. Un test automatique
+verrouille ce cas précis pour qu'il ne réapparaisse jamais.
+
+### Les modèles prévus n'existaient plus, et leurs remplaçants « réfléchissent »
+
+**Le problème.** Les trois modèles choisis sur le papier (Llama 3.2, Qwen 2.5)
+ne figuraient plus au catalogue de LM Studio. Les alternatives disponibles —
+Qwen3, Phi-4-mini-reasoning — sont des modèles dits « à raisonnement » : avant de
+répondre, ils rédigent un long monologue interne.
+
+**Pourquoi ça bloquait.** Nous limitons chaque réponse à 32 mots pour que le
+benchmark tienne dans un temps raisonnable. Ces modèles consomment ce budget en
+réflexion et ne rendent… rien du tout. Testé : leur réponse est littéralement
+vide, même en quadruplant le budget. Ils auraient obtenu 0 %, ce qui n'aurait
+rien dit de leur culture générale — seulement de leur façon de s'exprimer.
+
+**Ce qu'on a fait.** Nous avons vérifié le comportement plutôt que de le
+supposer, puis retenu la famille gemma-3, qui répond directement en quatre ou
+cinq mots. Le benchmark compare donc deux tailles de cette famille, 1 et
+4 milliards de paramètres. On perd la comparaison entre familles de modèles ;
+c'est écrit noir sur blanc dans les limites du rapport.
+
+### Vingt-cinq heures de calcul pour poser toutes les questions
+
+**Le problème.** Une fois les vraies vitesses mesurées, le calcul est sans
+appel : 3,4 secondes par question pour le petit modèle, 14 secondes pour le
+grand. Poser les 5 295 questions aux deux modèles demanderait environ 25 heures.
+
+**Pourquoi ça bloquait.** L'ordinateur serait monopolisé plusieurs jours, et la
+moindre correction de méthode aurait imposé de tout refaire.
+
+**Ce qu'on a fait.** Nous travaillons sur un échantillon tiré au hasard, en
+fixant le budget de calcul disponible. Surtout, nous avons rendu les
+échantillons **emboîtés** : les 200 premières questions font partie des 500
+premières. On peut donc agrandir l'échantillon plus tard sans rien recalculer,
+puisque le programme ne repose jamais une question déjà posée. Sans cette
+précaution, passer de 200 à 500 questions aurait tiré 500 questions entièrement
+différentes et jeté le travail déjà fait.
+
 ---
 
 ## 4. Ce qu'on a appris

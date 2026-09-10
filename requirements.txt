@@ -11,7 +11,7 @@ dbt-core==1.12.4
 dbt-duckdb==1.11.0
 
 # Enrichissement : client compatible OpenAI (LM Studio, Ollama)
-openai==1.54.4
+openai==3.11.0
 python-dotenv==1.0.1
 
 # Restitution

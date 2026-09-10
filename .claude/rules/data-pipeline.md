@@ -55,6 +55,8 @@ Ces schémas sont le contrat entre les trois membres du groupe. Les changer cass
 - **Appel de préchauffage exclu des mesures** ; précharger via `lms load`. Vérifier `lms ps` : un seul modèle chargé, sinon les temps mesurent la contention mémoire.
 - **`--workers 1` par défaut.** Le parallélisme fausse `response_time`.
 - Clé de modèle = sortie de `lms ls`, jamais un nom recopié depuis la doc.
+- 🔴 **Écarter les modèles à raisonnement.** Qwen3 et Phi-4-mini-reasoning émettent leur réflexion dans `reasoning_content` et laissent `content` **vide** : avec `max_tokens=32` ils scorent 0 %, ce qui mesure leur format de sortie, pas leur culture générale. Vérifié sur `qwen/qwen3-1.7b`. Le suffixe `/no_think` débloque le contenu mais dégrade nettement les réponses. Modèles retenus : famille **gemma-3**, qui répond en 4-5 tokens.
+- **Un seul modèle résident.** `lms unload --all` avant chaque `lms load` (attention : `--all` n'accepte pas `-y`). Deux modèles chargés saturent la RAM et faussent `response_time`.
 
 ## Prompts
 
@@ -68,7 +70,7 @@ Cascade, première règle qui statue :
 
 1. `exact` — égalité après normalisation
 2. `boolean` — `true`/`false`, `yes`/`no` pour les questions `boolean`
-3. `option_substring` — **une seule** option présente dans la réponse ; plusieurs → ambigu → incorrect
+3. `option_substring` — recherche des options avec **frontières de mots** (`\b`), sinon « 1979 » matcherait dans « 11979 ». Quand plusieurs options se chevauchent au même endroit, **la plus longue l'emporte** : sans cela « Dark Red » déclencherait deux correspondances (« Red » y est contenu) et la bonne réponse serait rejetée pour ambiguïté — un faux négatif systématique sur les catégories aux options emboîtées. L'ambiguïté n'est déclarée que pour deux options **disjointes** → incorrect
 4. `fuzzy` — `difflib.SequenceMatcher` ≥ 0,90
 5. `none` — incorrect
 
@@ -79,5 +81,6 @@ Cascade, première règle qui statue :
 ## Reprise et robustesse
 
 - Au démarrage, lire `ai_answers.parquet` et retirer les triplets déjà traités : une exécution interrompue reprend où elle s'est arrêtée.
+- **`--limit N` doit produire des échantillons emboîtés** : mélange déterministe puis `head(N)`, jamais `sample(n=N)`. Les 200 premières font alors partie des 500 premières, et agrandir l'échantillon plus tard ne coûte que le complément. Avec `sample(n=N)`, deux tailles donnent deux tirages disjoints et tout serait à recalculer.
 - Écriture par lots de 100 dans `data/silver/_ai_answers_parts/`, consolidés en fin de run.
 - Timeout, modèle non chargé, sortie vide : écrire la ligne avec `error` renseigné et `ai_correct = NULL`.

@@ -29,6 +29,7 @@ run à l'autre :
 | `max_tokens` | 32 | Évite les réponses tronquées comme les digressions |
 | Prompt | version retenue à l'étape 2 | Comparaison à formulation constante |
 | Machine | Intel i7-8550U, 4 cœurs @ 1,8 GHz, pas de GPU, 12 Go alloués à WSL2 | Les temps ne sont comparables qu'à matériel égal |
+| Modèle résident | **Un seul à la fois** (`lms unload --all` avant chaque `lms load`) | Deux modèles chargés saturent la RAM : `response_time` mesurerait alors la contention |
 | Quantification | Q4 pour les trois modèles | Comparer des précisions différentes n'aurait pas de sens |
 | Workers | 1 | Pas de contention faussant `response_time` |
 
@@ -107,6 +108,9 @@ qu'il ne mesure pas induit son lecteur en erreur.
 | **Une seule exécution par question** | À `temperature = 0` c'est cohérent, mais aucune variance n'est mesurée | Assumé ; le déterminisme est privilégié |
 | **Étiquettes de difficulté OpenTDB** | Attribuées par des contributeurs, non calibrées | Vérifier la monotonie ; signaler les inversions |
 | **`v3_mcq` fournit les options** | Gonfle mécaniquement le score | Présenté séparément, jamais comparé aux prompts libres |
+| **Benchmark sur un échantillon, pas sur les 5 295 questions** | L'incertitude est plus large, et les catégories les moins fournies deviennent ininterprétables | Échantillon aléatoire à graine fixe, donc non biaisé ; effectif affiché sur chaque taux ; échantillonnage **emboîté**, donc extensible sans tout recalculer |
+| **Deux modèles d'une seule famille (gemma-3)** | L'axe « effet de la taille » est mesuré, l'axe « différences entre familles » ne l'est pas | Assumé : les alternatives du catalogue sont des modèles à raisonnement, inexploitables sous ce protocole (voir `docs/03` §1) |
+| **Modèles à raisonnement écartés** | Le benchmark ne dit rien des modèles de type Qwen3 ou Phi-4-reasoning | Documenté et mesuré : avec `max_tokens=32` leur `content` est vide, ce qui mesurerait leur format de sortie et non leur culture générale |
 
 ---
 

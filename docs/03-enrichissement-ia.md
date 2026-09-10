@@ -40,18 +40,39 @@ Le benchmark ne vaut que si les modèles sont comparables *à contraintes égale
 On retient des modèles quantifiés qui tiennent en mémoire sur les machines de
 l'équipe :
 
-| Modèle | Taille | Empreinte Q4 | Rôle dans le benchmark |
+| Modèle | Taille | Empreinte | Rôle dans le benchmark |
 | --- | --- | --- | --- |
-| `llama-3.2-1b-instruct` | 1B | ~0,8 Go | Référence rapide |
-| `qwen2.5-1.5b-instruct` | 1,5B | ~1,1 Go | Comparaison à taille proche, autre famille |
-| `llama-3.2-3b-instruct` | 3B | ~2,0 Go | Effet de la taille du modèle |
+| `google/gemma-3-1b` | 1B | 720 Mo (Q4_0, QAT) | Référence rapide |
+| `google/gemma-3-4b` | 4B | 3,34 Go (Q4_K_M) | Effet de la taille du modèle |
 
 ```bash
-lms get llama-3.2-1b-instruct
-lms get qwen2.5-1.5b-instruct
-lms get llama-3.2-3b-instruct
+lms get -y --gguf google/gemma-3-1b
+lms get -y --gguf google/gemma-3-4b
 lms ls                      # relever les clés exactes
 ```
+
+### Pourquoi pas de modèle à raisonnement
+
+Le catalogue LM Studio ne propose plus Llama 3.2 ni Qwen 2.5. Les candidats
+restants d'autres familles — `qwen/qwen3-1.7b`, `qwen/qwen3-4b`,
+`microsoft/phi-4-mini-reasoning` — sont des **modèles à raisonnement**, et ils
+sont inexploitables ici. Mesuré sur `qwen/qwen3-1.7b` :
+
+| Configuration | Résultat |
+| --- | --- |
+| Prompt v3, `max_tokens=32` | `content` **vide** ; les 32 tokens partent dans `reasoning_content` |
+| Prompt v3, `max_tokens=256` | `content` toujours vide : le modèle n'a pas fini de réfléchir |
+| Prompt v3 + `/no_think` | Contenu débloqué, mais réponses erratiques : vide, ou « AUSTRALIA » pour la capitale de l'Australie |
+
+Leur faire réserver un budget de tokens suffisant pour raisonner coûterait
+~10 s par question, soit plus de 15 h pour un seul modèle sur ce CPU. Un score
+obtenu avec `/no_think` mesurerait la suppression de leur mode natif, pas leur
+culture générale.
+
+La famille **gemma-3** répond en 4-5 tokens, sans préambule, et se prête donc au
+protocole. Le benchmark compare deux tailles de cette famille : l'axe « effet de
+la taille du modèle » reste analysable, l'axe inter-familles est abandonné et
+signalé dans les limites.
 
 Ce trio est **calibré pour la machine du projet** : un i7-8550U (4 cœurs à
 1,8 GHz, sans GPU exploitable) et 12 Go alloués à WSL. Sur ce processeur,
@@ -220,10 +241,25 @@ Appliquées dans l'ordre, la première qui statue l'emporte :
 1. **Égalité stricte** après normalisation → correct.
 2. **Questions `boolean`** : détection de `true`/`false`, `yes`/`no`, `vrai`/`faux`
    dans la sortie, puis comparaison booléenne.
-3. **Questions `multiple`** : si exactement **une** des options (bonne réponse ou
-   distracteurs) apparaît comme sous-chaîne de la réponse normalisée, c'est le
-   choix du modèle. Si plusieurs apparaissent, la réponse est **ambiguë** → incorrect.
-   Cette règle est ce qui rattrape les réponses bavardes.
+3. **Questions `multiple`** : on cherche chaque option (bonne réponse ou
+   distracteur) dans la réponse normalisée, **avec frontières de mots**. Si
+   exactement une option est citée, c'est le choix du modèle. C'est cette règle
+   qui rattrape les réponses bavardes.
+
+   Deux précautions, sans lesquelles la règle produit des faux négatifs
+   systématiques :
+
+   - **Frontières de mots** (`\b`) : sans elles, l'option « 1979 » serait
+     trouvée dans « 11979 », et « Art » dans « Bart ».
+   - **La plus longue l'emporte en cas de chevauchement** : « Dark Red »
+     contient « Red ». Sans cette résolution, la bonne réponse « Dark Red »
+     déclencherait deux correspondances et tomberait dans la branche
+     « ambiguë ». Le biais ne serait pas aléatoire : il frapperait précisément
+     les catégories aux options emboîtées, qui paraîtraient plus difficiles
+     qu'elles ne le sont.
+
+   L'ambiguïté n'est donc déclarée que pour deux options **disjointes** →
+   incorrect.
 4. **Similarité de chaîne** : ratio `difflib.SequenceMatcher` ≥ **0,90** → correct.
    Absorbe fautes de frappe et variantes orthographiques mineures.
 5. Sinon → incorrect.
@@ -282,17 +318,29 @@ pénaliserait à tort le modèle.
 
 ## 5. Coût en temps
 
-| Modèle | ~temps/question (CPU) | 4 000 questions |
-| --- | --- | --- |
-| `llama-3.2-1b-instruct` | ~0,9 s | ~1 h |
-| `qwen2.5-1.5b-instruct` | ~1,3 s | ~1 h 25 |
-| `llama-3.2-3b-instruct` | ~2,0 s | ~2 h 15 |
+**Mesures réelles** sur l'i7-8550U (4 cœurs @ 1,8 GHz, sans GPU), un seul modèle
+résident, `max_tokens=32`, prompt v3 :
 
-> ⚠️ **Ce sont des estimations**, calculées à partir de la bande passante mémoire
-> de l'i7-8550U, pas des mesures. Elles doivent être remplacées par les temps
-> réels dès le premier run (`mart_latency`). Le run pilote du lot 3 sert
-> précisément à les valider : un écart supérieur au double impose de basculer sur
-> un échantillon de 1 000 questions.
+| Modèle | temps/question **mesuré** | Dataset complet (5 295) |
+| --- | --- | --- |
+| `google/gemma-3-1b` | **3,4 s** | ~5 h 00 |
+| `google/gemma-3-4b` | **14,0 s** | ~20 h 30 |
+
+Ces chiffres sont des **mesures**, pas des estimations. Ils ont invalidé les
+prévisions initiales — 0,9 s et 2 s — d'un facteur 4 à 7.
+
+Décomposition du coût, mesurée séparément : la génération tourne à ~0,19 s par
+token, mais la réponse ne fait que 4 tokens. **L'essentiel du temps part dans
+l'évaluation du prompt** — environ 21 tokens/s, soit ~3 s pour les 62 tokens de
+l'instruction v3. Passer l'instruction en message `system` pour bénéficier du
+cache de préfixe fait gagner 21 % (4,74 → 3,74 s), ce qui n'a pas paru justifier
+de restructurer le catalogue de prompts.
+
+**Conséquence sur le protocole** : le dataset complet demanderait ~25 h pour deux
+modèles. Le benchmark porte donc sur un **échantillon**, dont la taille est
+choisie selon le budget de calcul disponible. L'échantillonnage est **emboîté**
+(mélange déterministe puis `head(N)`) : agrandir l'échantillon plus tard ne coûte
+que le complément, la reprise ne retraitant jamais une question déjà posée.
 
 Stratégie recommandée : itérer sur un **échantillon de 300 questions** pendant tout
 le développement, et ne lancer le run complet qu'une fois le matching validé.
