@@ -102,6 +102,84 @@ passage sur le jeu de questions.
 trois tailles restent suffisamment différentes pour que la comparaison
 « est-ce qu'un modèle plus gros répond mieux ? » garde tout son sens.
 
+### Le site ne donne pas ses questions d'un bloc
+
+**Le problème.** Le site public ne permet pas de dire « donne-moi les questions
+1 000 à 1 050 ». Il n'y a pas de numéro de page.
+
+**Pourquoi ça bloquait.** Sans repère, redemander des questions revient à tirer
+au hasard : on récupère cent fois les mêmes et jamais les autres.
+
+**Ce qu'on a fait.** Le site propose un « jeton de session » : une sorte de
+ticket qui mémorise ce qu'il nous a déjà donné et ne le redonne jamais. On en
+demande un au début, on le présente à chaque appel, et le site nous sert les
+questions sans doublon jusqu'à épuisement.
+
+### Une demande toutes les cinq secondes, pas plus
+
+**Le problème.** Le site n'accepte qu'un appel toutes les 5 secondes par
+utilisateur. Au-delà, il refuse de répondre.
+
+**Pourquoi ça bloquait.** Récupérer 5 000 questions par paquets de 50 demande
+plus de cent appels. Sans attente entre chacun, tout s'arrête au troisième.
+
+**Ce qu'on a fait.** Le programme attend 5,2 secondes entre deux demandes, et
+double son temps d'attente s'il se fait tout de même refouler. La collecte dure
+donc une dizaine de minutes, ce qui est irréductible. Sur la collecte réelle,
+ce mécanisme a servi : quatre incidents réseau ou refus ont été rattrapés
+automatiquement, sans perdre une seule question.
+
+### Le site annonce « j'ai tout donné » alors qu'il lui reste des questions
+
+**Le problème.** C'est l'obstacle le plus sournois du projet. La documentation
+du site dit : si vous demandez plus de questions qu'il n'en existe, vous
+recevrez le message « pas assez de questions ». En réalité, le site renvoie un
+message différent : « j'ai déjà tout donné » — le même que lorsqu'une catégorie
+est réellement épuisée.
+
+**Pourquoi ça bloquait.** Nous demandions les questions par paquets de 50. Une
+catégorie comme « Comédies musicales » n'en compte que 36 : dès le premier
+appel, le site répondait « j'ai tout donné », et le programme serait passé à la
+catégorie suivante en croyant avoir terminé. Résultat : **zéro question
+récupérée** dans cette catégorie, et le dernier paquet incomplet perdu dans
+toutes les autres — environ **11 % du jeu de données, sans le moindre message
+d'erreur**.
+
+C'est précisément ce qui rend ce type de bug dangereux : rien ne plante, rien ne
+s'affiche en rouge. On obtient simplement un benchmark calculé sur un jeu de
+données amputé, sans savoir qu'il l'est.
+
+**Ce qu'on a fait.** Nous avons d'abord découvert le problème en testant l'API à
+la main avant d'écrire le programme, plutôt qu'en faisant confiance à la
+documentation. Puis nous avons changé de stratégie : au lieu de demander
+systématiquement 50 questions, le programme demande **exactement ce qu'il lui
+reste à récupérer**. Pour les comédies musicales, il demande 36, et il obtient
+36. Le message « j'ai tout donné » n'est cru qu'après une seconde vérification.
+
+Bénéfice inattendu : cette méthode ne gaspille aucun appel. La collecte a
+utilisé 124 appels, soit le minimum théorique.
+
+### Sur 21 617 questions annoncées, seules 5 298 sont distribuées
+
+**Le problème.** Le site annonce plus de 21 000 questions. Nous n'en avons
+récupéré que 5 298.
+
+**Pourquoi ce n'est pas une erreur.** Les questions du site sont proposées par
+ses utilisateurs, puis relues. À la date de la collecte, 10 911 attendaient
+encore une validation et 5 425 avaient été rejetées. Le site ne distribue que
+les questions **vérifiées**.
+
+**Ce qu'on a fait.** Nous avons pris le compteur « vérifiées » comme objectif,
+catégorie par catégorie, et vérifié à l'arrivée que les 24 comptes
+correspondaient exactement. C'est ce qui nous permet d'affirmer que la collecte
+est complète, et non « à peu près complète ».
+
+Ce chiffrage a aussi révélé un déséquilibre important : les jeux vidéo pèsent
+1 185 questions, soit près du quart du jeu de données, quand les comédies
+musicales en comptent 36. Le score global d'une IA sera donc fortement
+influencé par sa connaissance des jeux vidéo — une limite à garder en tête au
+moment de lire les résultats.
+
 ---
 
 ## 4. Ce qu'on a appris

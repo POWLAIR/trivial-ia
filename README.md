@@ -203,7 +203,27 @@ parallèle sur des données factices tant que le contrat est respecté.
 
 ---
 
-## 8. Documentation détaillée
+## 8. Licence et attribution
+
+Les questions proviennent de l'[Open Trivia Database](https://opentdb.com/) et
+sont distribuées sous licence
+[Creative Commons Attribution-ShareAlike 4.0 International](https://creativecommons.org/licenses/by-sa/4.0/)
+(CC BY-SA 4.0).
+
+Cette licence impose deux obligations, que ce dépôt respecte :
+
+- **Attribution** : la source est créditée ici et dans
+  `data/bronze/_ingestion_report.json`, produit à chaque collecte.
+- **Partage dans les mêmes conditions** : toute redistribution des données, y
+  compris transformées, reste sous CC BY-SA 4.0.
+
+Le code du projet en est indépendant. Les données elles-mêmes ne sont pas
+versionnées (voir `.gitignore`) : le dépôt ne redistribue que le moyen de les
+reconstituer.
+
+---
+
+## 9. Documentation détaillée
 
 | Document | Contenu |
 | --- | --- |

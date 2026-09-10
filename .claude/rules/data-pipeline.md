@@ -35,13 +35,16 @@ Ces schémas sont le contrat entre les trois membres du groupe. Les changer cass
 
 ## Ingestion OpenTDB
 
-- **50 questions maximum par appel** (`amount=50`), et **l'API n'a pas d'offset**.
-- Le **jeton de session** est donc obligatoire : c'est la seule façon de balayer le dataset sans doublon.
-- **`response_code = 4` est le signal d'arrêt** : il prouve l'exhaustivité de la catégorie. Ne pas le traiter comme une erreur.
-- Codes à gérer : `0` succès, `1` pas assez de questions, `2` paramètre invalide (échouer bruyamment), `3` jeton expiré (renouveler), `4` épuisé (sortir), `5` débit dépassé (backoff).
-- **Throttle 5,2 s** entre requêtes, backoff exponentiel (5, 10, 20, 40 s) plafonné à 5 tentatives.
+- **50 questions maximum par appel** (`amount=50`), **une seule catégorie par appel**, et **l'API n'a pas d'offset**.
+- Le **jeton de session** est donc obligatoire : c'est la seule façon de balayer le dataset sans doublon. Il expire après **6 h d'inactivité** (`api_token.php?command=reset` pour le réinitialiser).
+- 🔴 **`response_code = 4` n'est PAS un signal d'arrêt fiable.** La doc annonce un code 1 quand on demande plus de questions qu'il n'en reste ; l'API renvoie en réalité un code 4, identique à celui de l'épuisement. Vérifié : demander 50 questions à une catégorie qui en a 36 renvoie `code=4, results=0`, alors que `amount=36` renvoie les 36. **S'arrêter sur le code 4 perdrait le dernier lot partiel de chaque catégorie, soit ~11 % du dataset, en silence.**
+- **Parade** : ne jamais demander plus que `expected - collected`, l'effectif attendu venant de `api_count_global.php`. Le code 4 ne conclut à l'épuisement qu'après une dichotomie descendante infructueuse.
+- Codes à gérer : `0` succès, `1` et `4` → repli sur un `amount` plus petit, `2` paramètre invalide (échouer bruyamment), `3` jeton expiré (renouveler), `5` débit dépassé (backoff).
+- **Throttle 5,2 s** entre *tous* les appels, endpoints d'aide compris : la limite est par IP, pas par endpoint.
+- 🔴 **La limite de débit se manifeste aussi en HTTP 429**, sans corps JSON donc sans `response_code` à tester. L'intercepter au niveau du transport, pas seulement via le code 5. Backoff exponentiel (5, 10, 20, 40 s), 5 tentatives.
 - Toujours tester `response_code` avant de lire `results`.
-- Contrôle d'exhaustivité par `api_count.php`, tracé dans `data/bronze/_ingestion_report.json`.
+- **Volumétrie réelle : 5 298 questions**, pas les 21 617 annoncées — 10 911 sont en attente de validation et 5 425 rejetées, et l'API ne sert que les questions *vérifiées*.
+- Contrôle d'exhaustivité par catégorie, tracé dans `data/bronze/_ingestion_report.json`.
 
 ## Enrichissement LM Studio
 

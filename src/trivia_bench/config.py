@@ -39,6 +39,9 @@ BENCHMARK_DUCKDB = GOLD_DIR / "benchmark.duckdb"
 OPENTDB_API_URL = "https://opentdb.com/api.php"
 OPENTDB_CATEGORY_URL = "https://opentdb.com/api_category.php"
 OPENTDB_COUNT_URL = "https://opentdb.com/api_count.php"
+# Compte global en un seul appel : donne le nombre de questions *vérifiées*
+# par catégorie, seules réellement servies par l'API.
+OPENTDB_COUNT_GLOBAL_URL = "https://opentdb.com/api_count_global.php"
 OPENTDB_TOKEN_URL = "https://opentdb.com/api_token.php"
 
 # L'API plafonne à 50 questions par appel et n'expose aucun offset : le balayage
