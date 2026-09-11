@@ -18,6 +18,11 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
+# Les modules de `app/` s'importent à plat (`from theme import ...`) : Streamlit
+# place le répertoire du script d'entrée sur le sys.path, pas la racine du dépôt.
+[tool.ruff.lint.isort]
+known-first-party = ["trivia_bench", "charts", "data_access", "filters", "theme", "views"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]

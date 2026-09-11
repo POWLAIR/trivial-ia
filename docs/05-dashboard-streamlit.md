@@ -104,6 +104,22 @@ C'est la page qui rend le benchmark **auditable** : elle permet de vérifier à 
 main pourquoi une réponse a été comptée fausse, et c'est là qu'on repère les
 défauts de matching.
 
+### Fiabilité
+
+- Répartition des verdicts par règle de la cascade, en barres empilées. `none`
+  est la ligne à surveiller : ces réponses sont comptées fausses sans qu'aucune
+  règle n'ait rien reconnu. Leur part **borne la sous-estimation possible** du
+  benchmark, et la page l'annonce comme telle.
+- Questions ratées par tous les modèles, par groupe de catégories. Un thème très
+  « raté par tous » signale autant les limites des modèles que les défauts du
+  dataset source — énoncés ambigus, réponses datées, étiquetage douteux.
+
+Source : `mart_matching_reliability` et `mart_answer_agreement`.
+
+Cette page porte la section « Fiabilité » du rapport final
+([06 — Méthodologie](06-methodologie-benchmark.md#5-contenu-du-rapport-final)) et
+sert de point de départ à l'annotation manuelle.
+
 ---
 
 ## 4. Filtres transversaux
@@ -133,6 +149,11 @@ Prérequis : `data/gold/benchmark.duckdb` doit exister. L'application vérifie s
 présence au démarrage et affiche la commande à lancer (`make gold`) plutôt qu'une
 trace d'erreur si le fichier est absent.
 
+🔴 **Fermer le dashboard avant de relancer `make gold`.** Même ouverte en
+`read_only`, une connexion DuckDB pose un verrou sur le fichier, et `dbt run`
+échoue alors sur un `Could not set lock on file`. Le message est explicite, mais
+il survient après `dbt deps` et `dbt seed` : autant couper l'application d'abord.
+
 ---
 
 ## 6. Conventions de visualisation
@@ -144,3 +165,16 @@ trace d'erreur si le fichier est absent.
 - Tout taux calculé sur moins de 30 observations est affiché en grisé ou masqué :
   l'intervalle de confiance y est trop large pour conclure.
 - Chaque graphique porte en légende le nombre d'observations sur lequel il repose.
+- **Barres d'erreur systématiques** portant `ci95_margin_pct`. Deux modèles dont
+  les intervalles se recouvrent ne sont pas départagés, et un graphique sans
+  barres d'erreur laisse croire l'inverse.
+- **La ligne de hasard est tracée par barre, pas une fois pour le graphique.**
+  Elle vaut 1/`n_choices`, et un échantillon mêle des QCM à 4 options (25 %) et
+  des vrai/faux (50 %) : une ligne unique serait fausse dès que la composition
+  varie d'une barre à l'autre.
+- **Les trois formats de tâche ne partagent jamais un classement.** Mettre
+  `generation_libre`, `qcm_options` et `qcm_lettre` côte à côte reviendrait à
+  déclarer un vainqueur entre trois épreuves différentes.
+
+Ces règles sont appliquées par `app/charts.py` plutôt que répétées dans chaque
+page : énoncées six fois à la main, l'une des six finit par en oublier une.
