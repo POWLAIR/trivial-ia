@@ -80,7 +80,7 @@ Si le besoin dépasse le périmètre annoncé, s'arrêter et l'indiquer en NOTE 
   - `fix: exclude failed LLM calls from accuracy`
   - `docs: update matching cascade in docs/03`
   - `chore: pin dbt-duckdb version`
-- Branches : `feat/…`, `fix/…`, `docs/…`. `main` protégée, une PR relue par un autre membre du groupe.
+- **Commits directement sur `main`.** Pas de branche de fonctionnalité, pas de Pull Request sur ce projet : à trois sur un dépôt de cette taille, la revue passe par la relecture du diff, pas par l'outil.
 - **Ne jamais committer** : `data/`, `.env`, `.venv/`, `dbt/trivia_gold/target/`, `__pycache__/`.
 
 ## Conventions Python
