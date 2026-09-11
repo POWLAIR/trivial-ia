@@ -88,9 +88,16 @@ trivial-ia/
 │   └── enrich/matching.py      ← calcul de `ai_correct`
 ├── dbt/trivia_gold/            ← étape 3 : silver → gold
 │   ├── dbt_project.yml
-│   ├── profiles.yml
-│   └── models/{staging,marts}/
-└── app/streamlit_app.py        ← dashboard de restitution
+│   ├── profiles.yml            ← versionné : cible locale, aucun secret
+│   ├── macros/                 ← accuracy_metrics() : taux, hasard, intervalle
+│   ├── seeds/                  ← prompt_catalog.csv : métadonnée de format
+│   └── models/{staging,intermediate,marts}/
+└── app/
+    ├── streamlit_app.py        ← entrée unique, navigation et filtres
+    ├── data_access.py          ← lecture seule de benchmark.duckdb
+    ├── charts.py               ← applique les règles de lecture honnête
+    ├── theme.py                ← palette stable par modèle
+    └── views/                  ← une page par question métier
 ```
 
 ---
@@ -102,7 +109,7 @@ trivial-ia/
 - Python **3.11+**
 - [LM Studio](https://lmstudio.ai/) installé, démon et serveur lancés
   (`lms daemon up && lms server start`, API sur le port 1234)
-- ~4 Go de RAM libre pour le plus gros modèle du benchmark (3B quantifié Q4)
+- ~3 Go de RAM libre pour le plus gros modèle du benchmark (4B quantifié Q4)
 - Sous WSL : vérifier `free -h`. Si moins de 8 Go, relever `memory=` dans
   `.wslconfig` puis `wsl --shutdown` (voir [docs/07](docs/07-demarche.md))
 
@@ -121,14 +128,23 @@ cp .env.example .env               # ajuster si besoin
 ### 5.3 Récupération des modèles
 
 ```bash
-lms get llama-3.2-1b-instruct
-lms get qwen2.5-1.5b-instruct
-lms get llama-3.2-3b-instruct
+lms get -y --gguf lmstudio-community/gemma-3-1B-it-QAT-GGUF
+lms get -y --gguf lmstudio-community/gemma-3-4b-it-GGUF
+lms get -y --gguf lmstudio-community/gemma-3-4B-it-qat-GGUF
 lms ls                             # relever les clés exactes des modèles
 ```
 
+Trois entrées de la famille **gemma-3** : deux tailles (1B et 4B) pour l'axe
+« effet de la taille », et deux quantifications du même 4B (Q4_K_M et Q4_0-QAT)
+pour l'axe « effet de la quantification ».
+
+Les modèles à raisonnement du catalogue (Qwen3, Phi-4-mini-reasoning) sont
+**écartés** : sous `max_tokens=32` ils consomment leur budget en réflexion et
+rendent un `content` vide. Voir [docs/03](docs/03-enrichissement-ia.md).
+
 Les clés listées par `lms ls` dépendent de la quantification téléchargée : ce sont
-elles qui sont passées à `--model`, jamais les noms recopiés ci-dessus.
+elles qui sont passées à `--model`, jamais les noms recopiés ci-dessus. Les motifs
+de fichier attendus sont déclarés dans `src/trivia_bench/config.py`.
 
 ### 5.4 Exécution du pipeline
 
@@ -145,8 +161,8 @@ Ou, sans `make` :
 ```bash
 python -m trivia_bench.ingest.opentdb
 python -m trivia_bench.silver.clean
-python -m trivia_bench.enrich.runner --model llama-3.2-1b-instruct --prompt-version v3
-cd dbt/trivia_gold && dbt run && dbt test && cd -
+python -m trivia_bench.enrich.runner --model gemma-3-1b --prompt-version v4_letter --limit 550
+cd dbt/trivia_gold && DBT_PROFILES_DIR=. dbt deps && dbt seed && dbt run && dbt test && cd -
 streamlit run app/streamlit_app.py
 ```
 
@@ -178,9 +194,9 @@ parallèle sur des données factices tant que le contrat est respecté.
 
 ### 6.2 Workflow Git
 
-- `main` protégée, une branche par fonctionnalité : `feat/ingest-opentdb`,
-  `feat/dbt-marts`, `docs/readme`…
-- Une Pull Request par branche, relue par un autre membre du groupe.
+- **Commits directement sur `main`**, pas de branche de fonctionnalité ni de Pull
+  Request : à trois sur un dépôt de cette taille, la revue passe par la relecture
+  du diff plutôt que par l'outil.
 - Commits conventionnels : `feat:`, `fix:`, `docs:`, `chore:`.
 - Les artefacts de `data/` ne sont **pas** versionnés : le pipeline est
   reproductible depuis la source.
@@ -199,7 +215,7 @@ parallèle sur des données factices tant que le contrat est respecté.
 
 - [x] Architecture de projet complète (médaillon bronze / silver / gold)
 - [x] `README.md` : méthodologie, organisation, setup complet
-- [ ] Application Streamlit — rapport de benchmark interactif
+- [x] Application Streamlit — rapport de benchmark interactif
 
 ---
 

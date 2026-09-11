@@ -33,13 +33,13 @@ PROMPTS: dict[str, str] = {
     ),
     # Réponse par lettre, contrainte par grammaire côté moteur.
     #
-    # L'instruction est volontairement laconique. Mesuré en alternant les deux
-    # variantes question par question : la formulation longue (« Answer the
-    # multiple-choice question with the letter of the correct option. Reply with
-    # a single letter. ») coûte 15 tokens de prompt de plus et 0,58 s de médiane
-    # par question, pour une justesse identique aux marges près. L'évaluation du
-    # prompt dominant le temps de calcul, chaque token d'instruction se paie à
-    # toutes les questions.
+    # L'instruction est laconique, mais pas pour la raison qu'on croyait. Mesuré
+    # en alternant les deux variantes question par question : entre 53 et 67
+    # tokens de prompt, l'écart est de 0,04 s par question, pour une justesse
+    # identique aux marges près. L'évaluation du prompt ne domine donc PAS le
+    # temps de calcul — un chiffre contraire a longtemps figuré ici, il était
+    # faux. Le gain de vitesse de v4_letter vient du token unique généré, pas de
+    # la brièveté de la consigne.
     "v4_letter": ("Answer with one letter.\nQuestion: {question}\n{options}\nAnswer:"),
     # Options fournies : la tâche devient un QCM.
     "v3_mcq": (

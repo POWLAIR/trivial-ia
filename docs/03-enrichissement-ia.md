@@ -211,18 +211,34 @@ Trois conséquences, dont une seule concerne la vitesse :
 | **1 token généré** | Contre 4 à 5 pour `v3_mcq` |
 | **Zéro sortie hors format** | Pas de « B) Paris », pas de lettre hors domaine, pas de réponse vide |
 
-**L'instruction est volontairement laconique** (« Answer with one letter. »).
-Mesuré en alternant les deux variantes question par question, pour annuler toute
-dérive du serveur : une formulation complète coûte 15 tokens de prompt
-supplémentaires et **0,58 s de médiane par question**, pour une justesse
-identique aux marges près (4 réponses divergentes sur 40). L'évaluation du prompt
-dominant le temps de calcul, chaque token d'instruction se paie à chaque
-question.
+**L'instruction est volontairement laconique** (« Answer with one letter. »), mais
+**pas pour la raison qu'on croyait**.
 
-> ⚠️ Une première mesure, faite en exécutant les variantes l'une après l'autre,
-> donnait l'instruction courte **deux fois plus lente**. C'était un artefact de
-> l'ordre d'exécution. L'alternance question par question est ce qui a redressé
-> le diagnostic.
+Mesuré en alternant les deux variantes question par question, pour annuler toute
+dérive du serveur : entre un prompt de 53 tokens et un prompt de 67 tokens,
+l'écart de temps par question est de **0,04 s**, pour une justesse identique aux
+marges près. L'évaluation du prompt **ne domine pas** le temps de calcul à cette
+échelle : 14 tokens d'instruction en plus ne se paient pratiquement pas.
+
+La décision tient — une instruction courte reste préférable, à justesse égale —
+mais son motif est le confort de lecture et non la vitesse. Le gain de vitesse de
+`v4_letter` vient d'ailleurs : **un seul token généré** au lieu de quatre ou cinq.
+C'est la génération qui coûte, pas la relecture de la consigne.
+
+> ⚠️ Deux mesures fausses ont précédé celle-ci, et elles se contredisaient.
+>
+> La première, faite en exécutant les variantes l'une après l'autre, donnait
+> l'instruction courte **deux fois plus lente** — artefact de l'ordre
+> d'exécution, la machine ayant ralenti entre les deux passages.
+>
+> La seconde, corrigée par alternance mais lue trop vite, a été publiée ici comme
+> « 0,58 s d'écart » puis reprise ailleurs comme « 40 % plus rapide ». Les deux
+> chiffres étaient faux, et ils ont circulé dans trois fichiers du dépôt avant
+> d'être vérifiés.
+>
+> La leçon porte au-delà du détail : **un chiffre commode se recopie plus vite
+> qu'il ne se vérifie**. Sur ce projet, un résultat qui arrange doit être mesuré
+> deux fois, pas une.
 
 `v3_mcq` mérite une lecture prudente : fournir les options transforme la tâche en
 QCM et **augmente mécaniquement** le taux de bonnes réponses (25 % de réussite au

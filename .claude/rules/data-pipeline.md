@@ -64,7 +64,7 @@ Ces schémas sont le contrat entre les trois membres du groupe. Les changer cass
 - Ajouter une version, ne jamais éditer une version existante : cela invaliderait silencieusement les résultats déjà collectés.
 - `v3_mcq` fournit les options : il n'est **pas comparable** aux prompts en génération libre.
 - `v4_letter` étiquette les options A/B/C/D et **contraint la sortie par grammaire** (`root ::= [A-D]`, `max_tokens=1`), passée au moteur via `extra_body`. Le modèle ne peut produire qu'une lettre valide : plus de parsing, plus de `fuzzy`. C'est un **troisième format**, encore plus facile — il force une réponse même sans connaissance, donc à lire avec sa ligne de hasard.
-- **L'instruction se paie à chaque question.** L'évaluation du prompt domine le temps de calcul : 15 tokens d'instruction en trop coûtent 0,58 s par question. Mesurer avant d'allonger.
+- 🔴 **L'évaluation du prompt ne domine PAS le temps de calcul.** Mesuré : entre 53 et 67 tokens de prompt, l'écart est de **0,04 s** par question. Deux chiffres contraires ont circulé dans le dépôt (« 0,58 s », « 40 % plus rapide ») avant d'être vérifiés — ils étaient faux. Ce qui coûte, c'est la **génération** : `v4_letter` est rapide parce qu'il produit 1 token, pas parce que sa consigne est courte.
 - 🔴 **Comparer deux variantes de prompt en alternant question par question**, jamais l'une après l'autre : une première mesure séquentielle donnait l'instruction courte deux fois plus *lente*, artefact de l'ordre d'exécution.
 
 ## Réponse par lettre

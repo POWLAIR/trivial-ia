@@ -97,10 +97,11 @@ modèle est gros, plus il est lent. Un modèle de 7 milliards de paramètres aur
 produit deux à trois mots par seconde, soit plus de cinq heures pour un seul
 passage sur le jeu de questions.
 
-**Ce qu'on a fait.** Nous avons choisi trois modèles plus petits — 1, 1,5 et
-3 milliards de paramètres — et mis à jour la documentation en conséquence. Les
-trois tailles restent suffisamment différentes pour que la comparaison
-« est-ce qu'un modèle plus gros répond mieux ? » garde tout son sens.
+**Ce qu'on a fait.** Nous avons choisi des modèles plus petits, de la famille
+gemma-3 : **1 et 4 milliards de paramètres**, auxquels s'ajoute une seconde
+version du modèle à 4 milliards, compressée autrement. L'écart entre 1 et
+4 milliards reste suffisant pour que la comparaison « est-ce qu'un modèle plus
+gros répond mieux ? » garde tout son sens.
 
 ### Le site ne donne pas ses questions d'un bloc
 
@@ -277,21 +278,35 @@ répond **même quand il n'en sait rien**. Son score se rapproche donc du hasard
 au lieu de tomber en dessous. C'est pourquoi chaque chiffre est affiché à côté
 de sa ligne de hasard.
 
-### Une instruction plus courte fait gagner du temps — mais il a fallu bien mesurer
+### Nous avons cru qu'une instruction plus courte faisait gagner du temps. C'était faux.
 
-**Le problème.** L'ordinateur relit l'instruction du début à chaque question.
-Une consigne de cinquante mots est donc relue cinq cents fois.
+**Le problème.** L'ordinateur relit l'instruction du début à chaque question. Une
+consigne de cinquante mots est donc relue cinq cents fois. Il paraissait évident
+qu'une consigne plus courte ferait gagner du temps.
 
-**Ce qu'on a fait.** Nous avons comparé une consigne détaillée à une consigne
-minimale. Première mesure : la version courte semblait **deux fois plus lente**,
-ce qui n'avait aucun sens. En réalité nous avions lancé les deux tests l'un après
-l'autre, et la machine avait ralenti entre-temps.
+**Première mesure.** La version courte semblait **deux fois plus lente**, ce qui
+n'avait aucun sens. Nous avions lancé les deux tests l'un après l'autre, et la
+machine avait ralenti entre-temps.
 
-En reprenant la mesure question par question, en alternant les deux versions, le
-résultat s'est inversé : la consigne courte est **40 % plus rapide**, pour une
-justesse identique. La leçon vaut au-delà de ce détail — comparer deux choses
-mesurées à des moments différents, c'est mesurer le temps qui passe autant que
-la différence qu'on cherche.
+**Deuxième mesure.** En alternant les deux versions question par question, le
+résultat s'est inversé. Nous en avons conclu que la consigne courte était
+nettement plus rapide, et nous l'avons écrit — à trois endroits dans le projet.
+
+**Troisième mesure.** En vérifiant ce chiffre, l'écart réel s'est révélé être de
+**quatre centièmes de seconde** par question, entre une consigne de 53 mots-machine
+et une de 67. Autrement dit : rien. Relire l'instruction ne coûte pratiquement
+pas. Ce qui coûte, c'est **écrire** la réponse — et c'est là que la consigne par
+lettre fait gagner du temps, puisqu'elle réduit la réponse à un seul caractère.
+
+**Ce qu'on en retient.** La décision n'a pas changé : la consigne courte est
+conservée, elle donne les mêmes résultats. C'est sa justification qui était
+fausse, et elle était inscrite noir sur blanc dans le dépôt, prête à être
+recopiée dans le rapport.
+
+La vraie leçon n'est pas celle qu'on croyait. Comparer deux choses mesurées à des
+moments différents est un piège connu, et nous l'avions évité. Le piège suivant
+est plus discret : **un chiffre qui arrange se recopie plus vite qu'il ne se
+vérifie**. Celui-ci a voyagé dans trois fichiers avant que quelqu'un le remesure.
 
 ---
 
