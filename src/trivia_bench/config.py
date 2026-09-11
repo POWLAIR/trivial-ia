@@ -8,6 +8,7 @@ et ne touche pas au code du runner.
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 
@@ -102,8 +103,66 @@ PROMPT_SAMPLE_SIZE = 300
 # Trio calibré pour la machine du projet (i7-8550U, 4 cœurs, pas de GPU) :
 # trois tailles nettement séparées pour que l'axe « effet de la taille » reste
 # analysable, tout en restant exécutables sur ce CPU.
-DEFAULT_MODELS = (
-    "llama-3.2-1b-instruct",
-    "qwen2.5-1.5b-instruct",
-    "llama-3.2-3b-instruct",
-)
+# Modèles retenus : deux tailles de la famille gemma-3. Les alternatives du
+# catalogue LM Studio (qwen3, phi-4-mini-reasoning) sont des modèles à
+# raisonnement, dont le `content` reste vide sous un budget de 32 tokens.
+# La valeur est le motif de nom du fichier GGUF, tel que téléchargé par `lms get`.
+MODELS = {
+    "gemma-3-1b": "gemma-3-1B-it-QAT-Q4_0.gguf",
+    "gemma-3-4b": "gemma-3-4b-it-Q4_K_M.gguf",
+}
+
+# --- Moteur d'inférence ---------------------------------------------------
+
+# LM Studio sert à télécharger et gérer les modèles, mais son serveur impose
+# `--threads 1` sur cette machine — ni la CLI ni son SDK n'exposent le réglage.
+# On lance donc directement le llama.cpp qu'il embarque. Mesuré : 3x de débit
+# (gemma-3-1b de 3,4 s à 1,13 s par question), à moteur et modèles identiques.
+LMSTUDIO_HOME = Path.home() / ".lmstudio"
+MODELS_DIR = LMSTUDIO_HOME / "models"
+BACKENDS_DIR = LMSTUDIO_HOME / "extensions" / "backends"
+
+LLAMA_THREADS = 4
+LLAMA_CTX_SIZE = 2048  # 8192 par défaut coûte cher en évaluation de prompt
+LLAMA_PORT = 1235
+
+
+BACKEND_PREFERENCE_FILE = LMSTUDIO_HOME / ".internal" / "backend-preferences-v1.json"
+
+
+def llama_server_bin() -> Path:
+    """Localise le binaire llama-server fourni par LM Studio.
+
+    On suit le backend que LM Studio a lui-même retenu, lu dans ses préférences.
+    Prendre le premier venu choisirait le backend Vulkan, alors que cette machine
+    n'a pas de GPU exploitable : c'est la variante `avx2` qui convient.
+    """
+    preferred = None
+    if BACKEND_PREFERENCE_FILE.exists():
+        entries = json.loads(BACKEND_PREFERENCE_FILE.read_text())
+        for entry in entries:
+            if entry.get("model_format") == "gguf":
+                preferred = f"{entry['name']}-{entry['version']}"
+                break
+
+    if preferred:
+        candidate = BACKENDS_DIR / preferred / "llama-server"
+        if candidate.exists():
+            return candidate
+
+    candidates = sorted(BACKENDS_DIR.glob("llama.cpp-*/llama-server"))
+    if not candidates:
+        raise FileNotFoundError(f"aucun llama-server sous {BACKENDS_DIR}")
+    return candidates[0]
+
+
+def model_path(key: str) -> Path:
+    """Chemin du fichier GGUF d'un modèle du benchmark."""
+    try:
+        pattern = MODELS[key]
+    except KeyError:
+        raise ValueError(f"modèle inconnu : {key} (connus : {sorted(MODELS)})") from None
+    matches = [p for p in MODELS_DIR.rglob(pattern) if "mmproj" not in p.name]
+    if not matches:
+        raise FileNotFoundError(f"{pattern} introuvable — lancez `lms get -y --gguf google/{key}`")
+    return matches[0]

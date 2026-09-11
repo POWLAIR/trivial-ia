@@ -24,3 +24,6 @@ dbt/**/logs/
 # Outils
 .playwright-mcp/
 .DS_Store
+
+# Éditeur
+.vscode/
