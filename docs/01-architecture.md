@@ -105,14 +105,26 @@ Parquet silver via `read_parquet()`.
 Chaque table gold répond à **une** question métier ; elle est directement
 consommable par le dashboard sans agrégation supplémentaire.
 
+Entre le staging et les marts, une couche **intermédiaire** porte les précalculs
+partagés par plusieurs marts et non consommés tels quels par le dashboard.
+
 | Modèle | Grain | Question métier |
 | --- | --- | --- |
+| `int_common_questions` | modèle × question | Quelles questions toutes les versions de prompt de ce modèle ont-elles traitées ? |
+| `int_answer_agreement` | question × prompt | Combien de modèles ont réussi cette question ? |
 | `fct_answers` | question × modèle × prompt | Table de faits, jointure silver enrichie |
 | `mart_model_performance` | modèle × prompt | Quel modèle / prompt est le meilleur globalement ? |
-| `mart_performance_by_category` | modèle × catégorie | Sur quels thèmes le modèle échoue-t-il ? |
-| `mart_performance_by_difficulty` | modèle × difficulté | La difficulté OpenTDB discrimine-t-elle ? |
-| `mart_latency` | modèle | Quel est le coût en temps de réponse ? |
-| `mart_prompt_impact` | prompt × modèle | Quel est l'effet de la formulation du prompt ? |
+| `mart_performance_by_category` | modèle × prompt × catégorie | Sur quels thèmes le modèle échoue-t-il ? |
+| `mart_performance_by_category_group` | modèle × prompt × groupe | Même question, au niveau du groupe de catégories |
+| `mart_performance_by_difficulty` | modèle × prompt × difficulté | La difficulté OpenTDB discrimine-t-elle ? |
+| `mart_latency` | modèle × prompt | Quel est le coût en temps de réponse ? |
+| `mart_prompt_impact` | modèle × prompt | Quel est l'effet de la formulation du prompt ? |
+| `mart_matching_reliability` | modèle × prompt × règle | Quelle règle de matching a statué, et avec quel verdict ? |
+| `mart_answer_agreement` | prompt × groupe de catégories | Les questions ratées par tous les modèles se regroupent-elles par thème ? |
+
+Tout mart portant un taux expose aussi son effectif (`n_questions`), sa référence
+au hasard (`random_baseline_pct`) et son incertitude (`ci95_margin_pct`) : un taux
+publié seul est trompeur.
 
 Le détail des modèles est documenté dans [04 — Modélisation dbt](04-modelisation-dbt.md).
 

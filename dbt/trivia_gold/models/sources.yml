@@ -1,0 +1,20 @@
+version: 2
+
+# dbt-duckdb lit un Parquet comme une source, sans étape de chargement :
+# `{{ source('silver', 'questions') }}` se résout en read_parquet(...).
+#
+# Le chemin doit être **absolu**. Il est écrit tel quel dans la définition des
+# vues de staging : relatif, ces vues ne seraient interrogeables que depuis le
+# répertoire du projet dbt, et `duckdb data/gold/benchmark.duckdb` lancé depuis
+# la racine échouerait sur un « No files found that match the pattern ».
+# `benchmark.duckdb` n'est pas versionné et se reconstruit sur chaque machine :
+# y inscrire un chemin absolu local ne nuit pas à la reproductibilité.
+sources:
+  - name: silver
+    meta:
+      external_location: "{{ env_var('TRIVIA_SILVER_DIR', '../../data/silver') }}/{name}.parquet"
+    tables:
+      - name: questions
+        description: "Questions OpenTDB nettoyées, une ligne par question_id."
+      - name: ai_answers
+        description: "Réponses des modèles, une ligne par (question_id, model, prompt_version)."

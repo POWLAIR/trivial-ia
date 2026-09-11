@@ -1,0 +1,24 @@
+version: 2
+
+seeds:
+  - name: prompt_catalog
+    description: >
+      Métadonnée de format des prompts. Elle existe pour que le dashboard puisse
+      séparer les familles sans rien calculer : donner les options transforme une
+      restitution en reconnaissance, et les deux ne se comparent pas.
+      Doit rester cohérent avec MCQ_VERSIONS et LETTER_VERSIONS de
+      src/trivia_bench/enrich/prompts.py. Le *texte* des prompts n'est pas dupliqué
+      ici : l'application le lit depuis PROMPTS, source unique.
+    columns:
+      - name: prompt_version
+        data_tests: [not_null, unique]
+      - name: format_family
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [generation_libre, qcm_options, qcm_lettre]
+      - name: is_mcq
+        data_tests: [not_null]
+      - name: is_letter
+        data_tests: [not_null]

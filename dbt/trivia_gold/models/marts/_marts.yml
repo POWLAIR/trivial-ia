@@ -1,0 +1,259 @@
+version: 2
+
+models:
+  - name: fct_answers
+    description: >
+      Table de faits. Grain : une ligne par (question, modèle, version de prompt).
+      Seule jointure entre questions et réponses, et socle de tous les marts.
+      Consommée directement par l'explorateur du dashboard, ce qui justifie qu'elle
+      porte l'énoncé et la bonne réponse : c'est ce qui rend le benchmark auditable.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [question_id, model, prompt_version]
+    columns:
+      - name: question_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_questions')
+                field: question_id
+      - name: question
+        description: "Exigé par l'explorateur : un verdict sans son énoncé n'est pas auditable."
+        data_tests: [not_null]
+      - name: correct_answer
+        data_tests: [not_null]
+      - name: ai_correct
+        data_tests: [not_null]
+      - name: response_time
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                inclusive: false
+      - name: difficulty
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [easy, medium, hard]
+      - name: question_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [multiple, boolean]
+      - name: format_family
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [generation_libre, qcm_options, qcm_lettre]
+      - name: random_baseline
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+                inclusive: false
+
+  - name: mart_model_performance
+    description: "Quel modèle / prompt est le meilleur globalement ?"
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [model, prompt_version]
+    columns:
+      - name: n_questions
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 1}
+      - name: accuracy_pct
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 0, max_value: 100}
+      - name: random_baseline_pct
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 0, max_value: 100}
+      - name: ci95_margin_pct
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 0, max_value: 100}
+
+  - name: mart_performance_by_category
+    description: "Sur quels thèmes le modèle échoue-t-il ? Catégories de moins de 30 questions écartées."
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [model, prompt_version, category]
+    columns:
+      - name: n_questions
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 30}
+      - name: accuracy_pct
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 0, max_value: 100}
+      - name: random_baseline_pct
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 0, max_value: 100}
+      - name: ci95_margin_pct
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 0, max_value: 100}
+
+  - name: mart_performance_by_category_group
+    description: "Même question au niveau du groupe de catégories. Existe parce que le dashboard ne peut pas agréger."
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [model, prompt_version, category_group]
+    columns:
+      - name: n_questions
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 30}
+      - name: accuracy_pct
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 0, max_value: 100}
+      - name: random_baseline_pct
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 0, max_value: 100}
+      - name: ci95_margin_pct
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 0, max_value: 100}
+
+  - name: mart_performance_by_difficulty
+    description: >
+      La difficulté déclarée par OpenTDB discrimine-t-elle ? `has_inversion` signale
+      qu'un modèle réussit mieux les questions hard que les easy — anomalie à
+      interpréter, que le dashboard doit afficher et non lisser.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [model, prompt_version, difficulty]
+    columns:
+      - name: difficulty
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [easy, medium, hard]
+      - name: has_inversion
+        data_tests: [not_null]
+      - name: n_questions
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 1}
+      - name: accuracy_pct
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 0, max_value: 100}
+      - name: random_baseline_pct
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 0, max_value: 100}
+      - name: ci95_margin_pct
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 0, max_value: 100}
+
+  - name: mart_latency
+    description: >
+      Quel est le coût en temps de réponse ? Grain modèle × prompt : v4_letter génère
+      un token contre quatre ou cinq pour v3_mcq, et la médiane agrégée au seul
+      modèle mélangerait deux régimes de génération.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [model, prompt_version]
+    columns:
+      - name: median_response_time
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 0, inclusive: false}
+      - name: p90_response_time
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 0, inclusive: false}
+      - name: avg_time_per_token
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 0, inclusive: false}
+
+  - name: mart_prompt_impact
+    description: >
+      Effet de la formulation du prompt, à modèle constant, restreint aux questions
+      communes à toutes les versions de ce modèle.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [model, prompt_version]
+    columns:
+      - name: n_questions
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 1}
+      - name: accuracy_pct
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 0, max_value: 100}
+      - name: random_baseline_pct
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 0, max_value: 100}
+      - name: ci95_margin_pct
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 0, max_value: 100}
+
+  - name: mart_matching_reliability
+    description: >
+      Quelle règle de la cascade a statué, et avec quel verdict ? `none` est la ligne
+      à surveiller : réponses comptées fausses sans qu'aucune règle n'ait rien
+      reconnu, donc l'endroit où se logent les faux négatifs.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [model, prompt_version, match_rule]
+    columns:
+      - name: match_rule
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [exact, boolean, option_substring, fuzzy, letter, none]
+      - name: pct_of_answers
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 0, max_value: 100}
+      - name: pct_correct_within_rule
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 0, max_value: 100}
+
+  - name: mart_answer_agreement
+    description: >
+      Les questions ratées par tous les modèles forment-elles un groupe cohérent ?
+      Un taux élevé de missed_by_all sur un thème signale autant les limites des
+      modèles que les défauts du dataset source.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [prompt_version, category_group]
+    columns:
+      - name: n_questions
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 30}
+      - name: pct_missed_by_all
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 0, max_value: 100}
+      - name: pct_solved_by_all
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 0, max_value: 100}

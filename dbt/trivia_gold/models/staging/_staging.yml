@@ -1,0 +1,53 @@
+version: 2
+
+models:
+  - name: stg_questions
+    description: "Questions silver, typées et renommées. Une ligne par question_id."
+    columns:
+      - name: question_id
+        description: "Clé primaire — hash SHA-256 de question + correct_answer."
+        data_tests: [not_null, unique]
+      - name: question_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [multiple, boolean]
+      - name: difficulty
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [easy, medium, hard]
+      - name: n_choices
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [2, 4]
+                quote: false
+
+  - name: stg_ai_answers
+    description: >
+      Réponses des modèles, appels en erreur exclus. Un appel LLM qui échoue porte
+      ai_correct = NULL et non False : le compter comme une mauvaise réponse
+      pénaliserait le modèle pour une panne d'infrastructure. L'exclusion est faite
+      ici une fois, pas dans chaque mart.
+    columns:
+      - name: question_id
+        data_tests: [not_null]
+      - name: model
+        data_tests: [not_null]
+      - name: prompt_version
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('prompt_catalog')
+                field: prompt_version
+      - name: ai_correct
+        description: "Non nul par construction : les erreurs sont filtrées en amont."
+        data_tests: [not_null]
+      - name: response_time
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                inclusive: false

@@ -20,6 +20,8 @@ __pycache__/
 dbt/**/target/
 dbt/**/dbt_packages/
 dbt/**/logs/
+# Identifiant anonyme généré par dbt à la première exécution, propre à la machine.
+dbt/**/.user.yml
 
 # Outils
 .playwright-mcp/

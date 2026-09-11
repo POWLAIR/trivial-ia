@@ -1,0 +1,36 @@
+name: trivia_gold
+version: 1.0.0
+config-version: 2
+
+profile: trivia_gold
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# Les matérialisations sont déclarées ici, au niveau du dossier, et nulle part
+# ailleurs : cinq `{{ config(materialized=...) }}` locaux finissent toujours par
+# diverger. Staging et intermediate sont des vues — aucune duplication de
+# données ; les marts sont des tables, lues instantanément par Streamlit.
+models:
+  trivia_gold:
+    staging:
+      +materialized: view
+    intermediate:
+      +materialized: view
+    marts:
+      +materialized: table
+
+seeds:
+  trivia_gold:
+    prompt_catalog:
+      +column_types:
+        prompt_version: varchar
+        format_family: varchar
+        is_mcq: boolean
+        is_letter: boolean

@@ -1,0 +1,6 @@
+prompt_version,format_family,is_mcq,is_letter
+v1,generation_libre,false,false
+v2,generation_libre,false,false
+v3,generation_libre,false,false
+v3_mcq,qcm_options,true,false
+v4_letter,qcm_lettre,true,true

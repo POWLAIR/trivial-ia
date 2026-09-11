@@ -1,0 +1,12 @@
+# Versionné volontairement : la cible est un fichier local, il n'y a aucun secret
+# ici. Les chemins sont relatifs au répertoire du projet dbt, d'où le
+# `DBT_PROFILES_DIR=.` de la cible `gold` du Makefile.
+trivia_gold:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: ../../data/gold/benchmark.duckdb
+      threads: 4
+      extensions:
+        - parquet

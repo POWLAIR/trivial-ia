@@ -17,8 +17,12 @@ silver:  ## Nettoyage : bronze -> data/silver/questions.parquet
 enrich:  ## Étape 2 : inférence LLM -> data/silver/ai_answers.parquet
 	python -m trivia_bench.enrich.runner $(ARGS)
 
-gold:  ## Étape 3 : dbt run + dbt test -> data/gold/benchmark.duckdb
-	cd dbt/trivia_gold && dbt deps && dbt run && dbt test
+# DBT_PROFILES_DIR : le profil est versionné dans le projet, pas dans ~/.dbt.
+# TRIVIA_SILVER_DIR : chemin absolu des Parquet source, inscrit tel quel dans les
+# vues de staging — relatif, elles ne seraient lisibles que depuis ce répertoire.
+gold:  ## Étape 3 : dbt seed + run + test -> data/gold/benchmark.duckdb
+	cd dbt/trivia_gold && DBT_PROFILES_DIR=. TRIVIA_SILVER_DIR=$(abspath data/silver) \
+		sh -c 'dbt deps && dbt seed && dbt run && dbt test'
 
 dashboard:  ## Lance le rapport interactif
 	streamlit run app/streamlit_app.py

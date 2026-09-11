@@ -1,0 +1,44 @@
+version: 2
+
+models:
+  - name: int_common_questions
+    description: >
+      Questions auxquelles toutes les versions de prompt d'un modèle ont répondu.
+      Condition de validité de toute comparaison entre versions : sans elle, une
+      version évaluée sur un sous-ensemble plus facile paraîtrait meilleure.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [model, question_id]
+    columns:
+      - name: model
+        data_tests: [not_null]
+      - name: question_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_questions')
+                field: question_id
+
+  - name: int_answer_agreement
+    description: >
+      Accord entre modèles, question par question, à prompt constant. Restreint aux
+      questions posées à tous les modèles ayant utilisé ce prompt : sinon
+      « ratée par tous » dépendrait du nombre de modèles interrogés, pas de la
+      difficulté de la question.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [question_id, prompt_version]
+    columns:
+      - name: n_models
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 1
+      - name: n_models_correct
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
