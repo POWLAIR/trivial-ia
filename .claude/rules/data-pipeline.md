@@ -63,6 +63,14 @@ Ces schémas sont le contrat entre les trois membres du groupe. Les changer cass
 - Catalogue **versionné** dans `enrich/prompts.py`. Chaque réponse stockée porte son `prompt_version`.
 - Ajouter une version, ne jamais éditer une version existante : cela invaliderait silencieusement les résultats déjà collectés.
 - `v3_mcq` fournit les options : il n'est **pas comparable** aux prompts en génération libre.
+- `v4_letter` étiquette les options A/B/C/D et **contraint la sortie par grammaire** (`root ::= [A-D]`, `max_tokens=1`), passée au moteur via `extra_body`. Le modèle ne peut produire qu'une lettre valide : plus de parsing, plus de `fuzzy`. C'est un **troisième format**, encore plus facile — il force une réponse même sans connaissance, donc à lire avec sa ligne de hasard.
+- **L'instruction se paie à chaque question.** L'évaluation du prompt domine le temps de calcul : 15 tokens d'instruction en trop coûtent 0,58 s par question. Mesurer avant d'allonger.
+- 🔴 **Comparer deux variantes de prompt en alternant question par question**, jamais l'une après l'autre : une première mesure séquentielle donnait l'instruction courte deux fois plus *lente*, artefact de l'ordre d'exécution.
+
+## Réponse par lettre
+
+- La lettre ne s'interprète qu'avec **l'ordre exact des options vu par le modèle**. Le runner reconstruit ce mélange via `shuffled_options(correct, incorrect, question_id)` — déterministe — et le transmet à `match_letter()`. Si les deux mélanges divergeaient, chaque réponse serait évaluée contre la mauvaise option et le benchmark serait faux **sans rien signaler**. Un test verrouille cet invariant.
+- Grammaire adaptée au nombre d'options : `[A-D]` pour un QCM, `[A-B]` pour un vrai/faux.
 
 ## Matching — `ai_correct`
 

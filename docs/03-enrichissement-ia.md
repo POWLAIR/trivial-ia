@@ -194,6 +194,35 @@ PROMPTS = {
 | `v2` | Consigne de format minimale | La contrainte de format réduit le bavardage |
 | `v3` | Consigne de format explicite + typologie de réponse attendue | Gain supplémentaire sur les réponses ambiguës |
 | `v3_mcq` | Options fournies (questions `multiple` et `boolean`) | Choix contraint ≫ génération libre |
+| `v4_letter` | Options étiquetées A/B/C/D, **sortie contrainte par grammaire** à une seule lettre | Supprimer le parsing élimine-t-il de l'erreur de mesure ? |
+
+### `v4_letter` : contraindre au lieu de demander
+
+Le moteur llama.cpp accepte une grammaire GBNF par requête. En passant
+`root ::= [A-D]` avec `max_tokens=1`, **le modèle ne peut physiquement produire
+qu'une lettre valide**. Le domaine s'adapte au nombre d'options : `[A-B]` pour
+une question vrai/faux.
+
+Trois conséquences, dont une seule concerne la vitesse :
+
+| Bénéfice | Détail |
+| --- | --- |
+| **Matching exact** | Une lettre → un index → une option. Ni `fuzzy`, ni sous-chaîne ambiguë. C'est le gain principal : il retire au benchmark sa dernière source d'erreur de mesure |
+| **1 token généré** | Contre 4 à 5 pour `v3_mcq` |
+| **Zéro sortie hors format** | Pas de « B) Paris », pas de lettre hors domaine, pas de réponse vide |
+
+**L'instruction est volontairement laconique** (« Answer with one letter. »).
+Mesuré en alternant les deux variantes question par question, pour annuler toute
+dérive du serveur : une formulation complète coûte 15 tokens de prompt
+supplémentaires et **0,58 s de médiane par question**, pour une justesse
+identique aux marges près (4 réponses divergentes sur 40). L'évaluation du prompt
+dominant le temps de calcul, chaque token d'instruction se paie à chaque
+question.
+
+> ⚠️ Une première mesure, faite en exécutant les variantes l'une après l'autre,
+> donnait l'instruction courte **deux fois plus lente**. C'était un artefact de
+> l'ordre d'exécution. L'alternance question par question est ce qui a redressé
+> le diagnostic.
 
 `v3_mcq` mérite une lecture prudente : fournir les options transforme la tâche en
 QCM et **augmente mécaniquement** le taux de bonnes réponses (25 % de réussite au
@@ -238,6 +267,11 @@ def normalize(text: str) -> str:
 
 Appliquées dans l'ordre, la première qui statue l'emporte :
 
+0. **`letter`** — pour les versions à réponse par lettre uniquement. La lettre est
+   convertie en index, puis comparée à la position de la bonne réponse **dans la
+   liste telle qu'elle a été présentée au modèle**. Cet ordre est reconstruit par
+   `shuffled_options()`, déterministe pour un `question_id` donné : sans lui, une
+   lettre serait ininterprétable. Une lettre hors domaine donne `none`.
 1. **Égalité stricte** après normalisation → correct.
 2. **Questions `boolean`** : détection de `true`/`false`, `yes`/`no`, `vrai`/`faux`
    dans la sortie, puis comparaison booléenne.
@@ -270,7 +304,7 @@ Un benchmark qui surestime est plus trompeur qu'un benchmark qui sous-estime.
 ### Traçabilité
 
 La règle qui a statué est enregistrée dans une colonne `match_rule`
-(`exact`, `boolean`, `option_substring`, `fuzzy`, `none`). Elle permet d'auditer
+(`letter`, `exact`, `boolean`, `option_substring`, `fuzzy`, `none`). Elle permet d'auditer
 le matching et d'estimer sa fiabilité : si une part importante des `True` vient
 de la règle `fuzzy`, le seuil mérite d'être resserré.
 

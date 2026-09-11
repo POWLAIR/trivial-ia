@@ -254,6 +254,45 @@ puisque le programme ne repose jamais une question déjà posée. Sans cette
 précaution, passer de 200 à 500 questions aurait tiré 500 questions entièrement
 différentes et jeté le travail déjà fait.
 
+### Faire répondre par une lettre plutôt que par un mot
+
+**Le problème.** Même avec les options affichées, l'IA répondait par du texte :
+« Leonardo da Vinci », parfois « The answer is Leonardo da Vinci ». Il fallait
+donc retrouver dans sa phrase laquelle des propositions elle avait choisie — un
+travail de devinette, avec ses erreurs.
+
+**Pourquoi ça bloquait.** Chaque devinette est une occasion de se tromper, et
+ces erreurs-là ne se voient pas : elles produisent un score légèrement faux, pas
+un message d'alerte.
+
+**Ce qu'on a fait.** On numérote désormais les propositions A, B, C, D et on
+demande une seule lettre. Surtout, on ne se contente pas de le demander : le
+moteur reçoit une **grammaire** qui lui interdit physiquement de produire autre
+chose qu'une lettre valide. Plus de phrase à décortiquer, plus de doute sur le
+choix du modèle — et une réponse au lieu de cinq mots, donc un calcul plus
+rapide.
+
+Effet secondaire à signaler dans le rapport : contraint de répondre, le modèle
+répond **même quand il n'en sait rien**. Son score se rapproche donc du hasard
+au lieu de tomber en dessous. C'est pourquoi chaque chiffre est affiché à côté
+de sa ligne de hasard.
+
+### Une instruction plus courte fait gagner du temps — mais il a fallu bien mesurer
+
+**Le problème.** L'ordinateur relit l'instruction du début à chaque question.
+Une consigne de cinquante mots est donc relue cinq cents fois.
+
+**Ce qu'on a fait.** Nous avons comparé une consigne détaillée à une consigne
+minimale. Première mesure : la version courte semblait **deux fois plus lente**,
+ce qui n'avait aucun sens. En réalité nous avions lancé les deux tests l'un après
+l'autre, et la machine avait ralenti entre-temps.
+
+En reprenant la mesure question par question, en alternant les deux versions, le
+résultat s'est inversé : la consigne courte est **40 % plus rapide**, pour une
+justesse identique. La leçon vaut au-delà de ce détail — comparer deux choses
+mesurées à des moments différents, c'est mesurer le temps qui passe autant que
+la différence qu'on cherche.
+
 ---
 
 ## 4. Ce qu'on a appris

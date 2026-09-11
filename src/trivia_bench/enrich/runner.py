@@ -27,8 +27,14 @@ import pandas as pd
 from openai import OpenAI
 
 from trivia_bench import config
-from trivia_bench.enrich.matching import match
-from trivia_bench.enrich.prompts import PROMPTS, build_prompt
+from trivia_bench.enrich.matching import match, match_letter
+from trivia_bench.enrich.prompts import (
+    LETTER_VERSIONS,
+    PROMPTS,
+    build_prompt,
+    letter_grammar,
+    shuffled_options,
+)
 
 ANSWER_COLUMNS = [
     "question_id",
@@ -58,20 +64,33 @@ def make_client() -> OpenAI:
     )
 
 
-def ask(client: OpenAI, model: str, prompt: str) -> tuple[str, float, int, str | None]:
+def ask(
+    client: OpenAI,
+    model: str,
+    prompt: str,
+    grammar: str | None = None,
+    max_tokens: int | None = None,
+) -> tuple[str, float, int, str | None]:
     """Pose une question et mesure le temps de génération.
 
     Le chronomètre encadre **uniquement** l'appel réseau. Le serveur étant
     local, la latence de transport est négligeable devant l'inférence.
+
+    `grammar` est une grammaire GBNF transmise au moteur llama.cpp via
+    `extra_body` : elle contraint la sortie au lieu de se contenter de la
+    demander dans le prompt. Le champ est ignoré par un serveur qui ne le
+    supporte pas, auquel cas la consigne du prompt reste le seul garde-fou.
     """
+    extra = {"grammar": grammar} if grammar else None
     started = time.perf_counter()
     try:
         response = client.chat.completions.create(
             model=model,
             messages=[{"role": "user", "content": prompt}],
             temperature=config.TEMPERATURE,
-            max_tokens=config.MAX_TOKENS,
+            max_tokens=max_tokens or config.MAX_TOKENS,
             seed=config.SEED,
+            extra_body=extra,
         )
     except Exception as exc:  # noqa: BLE001 - toute panne d'appel se trace pareil
         return "", time.perf_counter() - started, 0, f"{type(exc).__name__}: {exc}"
@@ -175,13 +194,29 @@ def run(model: str, prompt_version: str, limit: int | None) -> None:
     started = time.perf_counter()
     n_errors = 0
 
+    is_letter = prompt_version in LETTER_VERSIONS
+
     for index, row in enumerate(todo.to_dict("records"), start=1):
         prompt = build_prompt(row, prompt_version)
-        raw, elapsed, tokens, error = ask(client, model, prompt)
+        options = grammar = None
+        max_tokens = None
+
+        if is_letter:
+            # La lettre ne peut se résoudre qu'avec l'ordre exact vu par le
+            # modèle : on reconstruit le même mélange déterministe.
+            options = shuffled_options(
+                row["correct_answer"], list(row["incorrect_answers"]), row["question_id"]
+            )
+            grammar = letter_grammar(len(options))
+            max_tokens = 1
+
+        raw, elapsed, tokens, error = ask(client, model, prompt, grammar, max_tokens)
 
         if error:
             n_errors += 1
             correct, rule, normalized = None, None, ""
+        elif is_letter:
+            correct, rule, normalized = match_letter(raw, row["correct_answer"], options)
         else:
             correct, rule, normalized = match(
                 raw, row["correct_answer"], list(row["incorrect_answers"]), row["type"]

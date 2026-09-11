@@ -34,6 +34,7 @@ TRUE_WORDS = frozenset({"true", "yes", "vrai", "correct", "t"})
 FALSE_WORDS = frozenset({"false", "no", "faux", "incorrect", "f"})
 
 # Verdicts possibles, dans l'ordre de la cascade.
+RULE_LETTER = "letter"
 RULE_EXACT = "exact"
 RULE_BOOLEAN = "boolean"
 RULE_OPTION = "option_substring"
@@ -108,6 +109,37 @@ def _boolean_verdict(answer: str) -> bool | None:
     if says_true == says_false:  # les deux, ou aucun des deux
         return None
     return says_true
+
+
+LETTER_PATTERN = re.compile(r"^\s*\(?([A-Za-z])\b")
+
+
+def match_letter(
+    ai_answer_raw: str,
+    correct_answer: str,
+    options: list[str],
+) -> tuple[bool, str, str]:
+    """Résout une réponse par lettre en la comparant à l'option désignée.
+
+    `options` est la liste **telle qu'elle a été présentée au modèle**, donc
+    déjà mélangée. Sans cet ordre exact, une lettre est ininterprétable : c'est
+    la seule information que le matching ne peut pas reconstituer seul.
+
+    La grammaire du moteur garantit normalement une lettre nue, mais la règle
+    reste tolérante à « B) Paris » pour rester utilisable si la contrainte est
+    désactivée.
+    """
+    found = LETTER_PATTERN.match(ai_answer_raw or "")
+    if not found:
+        return False, RULE_NONE, normalize(ai_answer_raw)
+
+    index = ord(found.group(1).upper()) - ord("A")
+    if not 0 <= index < len(options):
+        # Lettre hors domaine : le modèle a désigné une option inexistante.
+        return False, RULE_NONE, normalize(ai_answer_raw)
+
+    chosen = options[index]
+    return normalize(chosen) == normalize(correct_answer), RULE_LETTER, chosen
 
 
 def match(

@@ -13,11 +13,14 @@ from trivia_bench.enrich.matching import (
     RULE_BOOLEAN,
     RULE_EXACT,
     RULE_FUZZY,
+    RULE_LETTER,
     RULE_NONE,
     RULE_OPTION,
     match,
+    match_letter,
     normalize,
 )
+from trivia_bench.enrich.prompts import build_prompt, letter_grammar, shuffled_options
 
 MCQ = "multiple"
 BOOL = "boolean"
@@ -158,3 +161,93 @@ class TestDegenerate:
     def test_normalized_answer_is_returned(self):
         _, _, normalized = match("  PARIS!  ", "Paris", ["Lyon"], MCQ)
         assert normalized == "paris"
+
+
+class TestLetter:
+    """Règle `letter` : la réponse est l'indice d'une option, pas son texte.
+
+    Ces tests portent sur la version `v4_letter`, où la sortie du modèle est
+    contrainte par une grammaire côté moteur. La règle reste tolérante aux
+    formes bavardes pour rester utilisable si la contrainte est désactivée.
+    """
+
+    OPTIONS = ["Lyon", "Paris", "Marseille", "Nice"]  # la bonne est en B
+
+    def test_correct_letter(self):
+        ok, rule, chosen = match_letter("B", "Paris", self.OPTIONS)
+        assert (ok, rule, chosen) == (True, RULE_LETTER, "Paris")
+
+    def test_wrong_letter(self):
+        ok, rule, chosen = match_letter("A", "Paris", self.OPTIONS)
+        assert (ok, rule, chosen) == (False, RULE_LETTER, "Lyon")
+
+    def test_lowercase(self):
+        ok, _, _ = match_letter("b", "Paris", self.OPTIONS)
+        assert ok is True
+
+    def test_verbose_form_still_parsed(self):
+        """La grammaire l'empêche, mais la règle doit rester robuste sans elle."""
+        for said in ["B) Paris", "B. Paris", "(B)", " B "]:
+            ok, rule, _ = match_letter(said, "Paris", self.OPTIONS)
+            assert (ok, rule) == (True, RULE_LETTER), said
+
+    def test_letter_out_of_range(self):
+        """« E » désigne une option qui n'existe pas : on ne devine pas."""
+        ok, rule, _ = match_letter("E", "Paris", self.OPTIONS)
+        assert (ok, rule) == (False, RULE_NONE)
+
+    def test_empty_answer(self):
+        ok, rule, _ = match_letter("", "Paris", self.OPTIONS)
+        assert (ok, rule) == (False, RULE_NONE)
+
+    def test_boolean_two_options(self):
+        ok, _, chosen = match_letter("A", "True", ["True", "False"])
+        assert (ok, chosen) == (True, "True")
+
+
+class TestLetterGrammar:
+    def test_domain_matches_option_count(self):
+        assert letter_grammar(4) == "root ::= [A-D]"
+        assert letter_grammar(2) == "root ::= [A-B]"
+
+    def test_rejects_impossible_counts(self):
+        with pytest.raises(ValueError):
+            letter_grammar(1)
+        with pytest.raises(ValueError):
+            letter_grammar(99)
+
+
+class TestLetterPrompt:
+    def test_options_are_lettered_and_deterministic(self):
+        row = {
+            "question": "Capital of France?",
+            "correct_answer": "Paris",
+            "incorrect_answers": ["Lyon", "Marseille", "Nice"],
+            "question_id": "q1",
+        }
+        first = build_prompt(row, "v4_letter")
+        assert first == build_prompt(row, "v4_letter"), "l'ordre doit être reproductible"
+        for letter in "ABCD":
+            assert f"\n{letter}. " in first
+
+    def test_letter_order_matches_matching(self):
+        """Le prompt et le matching doivent voir exactement le même ordre.
+
+        C'est l'invariant central de la règle `letter` : si les deux mélanges
+        divergeaient, chaque réponse serait évaluée contre la mauvaise option
+        et le benchmark serait faux sans rien signaler.
+        """
+        row = {
+            "question": "Capital of France?",
+            "correct_answer": "Paris",
+            "incorrect_answers": ["Lyon", "Marseille", "Nice"],
+            "question_id": "q1",
+        }
+        options = shuffled_options(
+            row["correct_answer"], row["incorrect_answers"], row["question_id"]
+        )
+        prompt = build_prompt(row, "v4_letter")
+        good_letter = "ABCD"[options.index("Paris")]
+        assert f"{good_letter}. Paris" in prompt
+        ok, _, _ = match_letter(good_letter, "Paris", options)
+        assert ok is True
