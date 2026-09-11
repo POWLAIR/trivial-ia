@@ -16,11 +16,24 @@ import streamlit as st
 
 import filters
 from data_access import database_is_available, missing_database_message
-from views import categories, difficulty, explorer, latency, overview, prompt_impact, reliability
+from views import (
+    categories,
+    difficulty,
+    explorer,
+    latency,
+    methodology,
+    overview,
+    prompt_impact,
+    reliability,
+)
 
 # Le chemin d'URL est explicite : les sept vues exposent toutes une fonction
 # nommée `render`, dont Streamlit déduirait le même pathname pour chacune.
 PAGES = [
+    # La méthodologie ouvre la navigation : les chiffres des pages suivantes ne
+    # sont pas interprétables sans le protocole qui les a produits ni les limites
+    # qui les bornent.
+    ("Méthodologie et limites", "📐", "methodologie", methodology.render),
     ("Vue d'ensemble", "📊", "vue-ensemble", overview.render),
     ("Par catégorie", "🗂️", "categories", categories.render),
     ("Par difficulté", "🎚️", "difficulte", difficulty.render),

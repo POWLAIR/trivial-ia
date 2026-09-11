@@ -45,6 +45,31 @@ garde une connexion unique ; `cache_data` met en cache les DataFrames retournés
 
 ## 3. Pages
 
+### Méthodologie, limites et conclusion
+
+Première page de la navigation : les chiffres des suivantes ne sont pas
+interprétables sans le protocole qui les a produits ni les limites qui les
+bornent.
+
+- Périmètre : taille du corpus, part réellement interrogée, effectifs.
+- Protocole : les paramètres figés, **lus dans `config.py`** et jamais recopiés —
+  un protocole affiché qui ne serait pas celui exécuté ne prouverait rien.
+- Les trois formats de tâche et ce qu'ils ne permettent pas de comparer.
+- Limites, dont deux **mesurées** et non supposées : la borne de sous-estimation
+  du matching (part de `match_rule = none`) et le nombre d'inversions de
+  monotonie sur la difficulté.
+- Conclusion conditionnelle par format : meilleur taux, son intervalle, et son
+  coût en temps rapporté à la combinaison la plus rapide.
+
+🔴 **Aucun chiffre en dur sur cette page.** Tout est lu dans les marts ou dans
+`config.py`. Un texte à chiffres figés serait faux dès le prochain `make gold` —
+et faux de façon crédible, ce qui est le mode de défaillance que ce projet
+cherche à éviter. La page signale d'ailleurs d'elle-même l'écart entre modèles
+déclarés dans `config.MODELS` et modèles réellement interrogés.
+
+Source : `mart_benchmark_scope`, `mart_model_performance`,
+`mart_matching_reliability`, `mart_performance_by_difficulty`, et `config.py`.
+
 ### Vue d'ensemble
 
 - Bandeau d'indicateurs : nombre de questions, de modèles évalués, meilleur taux

@@ -52,7 +52,8 @@ Ces règles ne sont pas cosmétiques : elles empêchent le dashboard de mentir.
 
 ## Structure
 
-- Pages : Vue d'ensemble, Par catégorie, Par difficulté, Temps de réponse, Impact du prompt, Explorateur de réponses, Fiabilité.
+- Pages : **Méthodologie et limites**, Vue d'ensemble, Par catégorie, Par difficulté, Temps de réponse, Impact du prompt, Explorateur de réponses, Fiabilité. La méthodologie ouvre la navigation.
+- 🔴 **Aucun chiffre en dur dans le texte des pages.** Taux, effectifs, nombres de modèles et paramètres du protocole se lisent dans les marts ou dans `config.py`. Un chiffre recopié devient faux au prochain `make gold`, et faux de façon crédible.
 - Entrée unique `app/streamlit_app.py` avec `st.navigation`, pas de répertoire `pages/` : la barre latérale de filtres doit être construite une fois et son état survivre à la navigation. Donner à chaque `st.Page` un `url_path` explicite — les vues exposent toutes une fonction `render`, dont Streamlit déduirait le même chemin.
 - Un filtre sans colonne correspondante dans la table lue doit être **signalé**, jamais ignoré en silence : le lecteur croirait sinon que les chiffres portent sur sa sélection.
 - Filtres transversaux en barre latérale (modèle, prompt, catégorie, difficulté, type), état conservé dans `st.session_state` pour survivre à la navigation.

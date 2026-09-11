@@ -55,6 +55,26 @@ models:
                 max_value: 1
                 inclusive: false
 
+  - name: mart_benchmark_scope
+    description: >
+      Périmètre du benchmark, une seule ligne. Existe pour que la page
+      « Méthodologie » annonce corpus, couverture et effectifs sans rien compter
+      côté application.
+    columns:
+      - name: n_questions_corpus
+        data_tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 1}
+      - name: n_questions_benchmarked
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 1}
+      - name: coverage_pct
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 0, max_value: 100}
+
   - name: mart_model_performance
     description: "Quel modèle / prompt est le meilleur globalement ?"
     data_tests:
