@@ -110,6 +110,11 @@ PROMPT_SAMPLE_SIZE = 300
 MODELS = {
     "gemma-3-1b": "gemma-3-1B-it-QAT-Q4_0.gguf",
     "gemma-3-4b": "gemma-3-4b-it-Q4_K_M.gguf",
+    # Même modèle que gemma-3-4b, autre quantification : Q4_0 issu d'un
+    # entraînement conscient de la quantification (QAT). Traité comme une entrée
+    # distincte pour que le benchmark puisse répondre à « le QAT récupère-t-il
+    # la qualité perdue à la quantification ? » à taille de modèle constante.
+    "gemma-3-4b-qat": "gemma-3-4B-it-QAT-Q4_0.gguf",
 }
 
 # --- Moteur d'inférence ---------------------------------------------------
