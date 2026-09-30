@@ -312,4 +312,36 @@ vérifie**. Celui-ci a voyagé dans trois fichiers avant que quelqu'un le remesu
 
 ## 4. Ce qu'on a appris
 
-<!-- À compléter au lot 8, une fois les résultats connus. -->
+Trois modèles, cinq façons de poser la question, 550 questions tirées au hasard :
+6 050 réponses au total. Voici ce qu'elles disent.
+
+**La taille du modèle compte beaucoup.** Quand on lui propose les réponses
+possibles, le petit modèle (1 milliard de paramètres) trouve la bonne dans 43 %
+des cas, le grand (4 milliards) dans 63 %. Répondre au hasard en donnerait 29 %.
+Le petit fait donc mieux que le hasard, mais de peu ; le grand, nettement.
+
+**La façon de poser la question compte autant que le modèle.** Sans les
+réponses proposées, quand l'IA doit trouver le mot elle-même, les scores tombent
+entre 18 et 31 %. Ce n'est pas la même épreuve : reconnaître la bonne réponse
+dans une liste est bien plus facile que de s'en souvenir. C'est pour cela que le
+tableau de bord ne classe jamais ces formats ensemble.
+
+**Compresser intelligemment le modèle ne coûte rien.** Nous avons testé deux
+versions compressées du grand modèle. La seconde (dite « QAT ») a appris dès son
+entraînement à supporter la compression. Résultat : moins de 0,4 point d'écart
+avec l'autre version, alors que la marge d'erreur est de ±4 points — autrement
+dit, aucune différence mesurable. Elle pèse pourtant 2,4 Go au lieu de 3,3, et
+répond environ 25 % plus vite.
+
+**On ne peut pas se fier aux étiquettes de difficulté du site.** Sur 8 des 11
+combinaisons modèle × question, les questions « moyennes » sont moins bien
+réussies que les « difficiles ». L'erreur va toujours dans le même sens, ce qui
+écarte le simple hasard : les étiquettes, posées par les contributeurs du site,
+ne reflètent visiblement pas la vraie difficulté.
+
+**Ce que ces chiffres ne disent pas.** Ils portent sur 550 questions et non sur
+les 5 295, ce qui laisse une marge d'erreur de ±4 points et rend les petites
+catégories illisibles. Ils ne concernent qu'une seule famille d'IA (Gemma), faute
+d'alternatives utilisables sur notre machine. Enfin, quand l'IA répond librement,
+notre correction automatique est volontairement sévère : un score en réponse libre
+est plutôt un minimum qu'une valeur exacte.
