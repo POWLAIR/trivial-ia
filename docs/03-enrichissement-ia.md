@@ -44,10 +44,12 @@ l'équipe :
 | --- | --- | --- | --- |
 | `google/gemma-3-1b` | 1B | 720 Mo (Q4_0, QAT) | Référence rapide |
 | `google/gemma-3-4b` | 4B | 3,34 Go (Q4_K_M) | Effet de la taille du modèle |
+| `gemma-3-4b-qat` | 4B | 2,36 Go (Q4_0, QAT) | Effet de la quantification, à taille constante |
 
 ```bash
 lms get -y --gguf google/gemma-3-1b
 lms get -y --gguf google/gemma-3-4b
+lms get -y --gguf lmstudio-community/gemma-3-4B-it-qat-GGUF
 lms ls                      # relever les clés exactes
 ```
 
@@ -70,15 +72,16 @@ obtenu avec `/no_think` mesurerait la suppression de leur mode natif, pas leur
 culture générale.
 
 La famille **gemma-3** répond en 4-5 tokens, sans préambule, et se prête donc au
-protocole. Le benchmark compare deux tailles de cette famille : l'axe « effet de
-la taille du modèle » reste analysable, l'axe inter-familles est abandonné et
-signalé dans les limites.
+protocole. Le benchmark compare deux tailles de cette famille (1B et 4B), et deux
+quantifications du même 4B (Q4_K_M et Q4_0-QAT) : les axes « effet de la taille
+du modèle » et « effet de la quantification » restent analysables, l'axe
+inter-familles est abandonné et signalé dans les limites.
 
 Ce trio est **calibré pour la machine du projet** : un i7-8550U (4 cœurs à
 1,8 GHz, sans GPU exploitable) et 12 Go alloués à WSL. Sur ce processeur,
 l'inférence est limitée par la bande passante mémoire : un modèle 7B tournerait
 à 2-3 tokens par seconde, ce qui rendrait le dataset complet hors de portée.
-Les trois tailles restent nettement séparées, donc l'axe « effet de la taille du
+Les deux tailles restent nettement séparées, donc l'axe « effet de la taille du
 modèle » demeure analysable.
 
 > **Ne pas recopier les noms ci-dessus en dur dans le code.** La clé réellement
