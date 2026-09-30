@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 import filters
-from charts import accuracy_figure, sample_caption
+from charts import accuracy_figure, chance_verdict, sample_caption, separable, takeaway
 from data_access import load
 from theme import MIN_SAMPLE, format_family_label
 
@@ -93,6 +93,13 @@ def _heatmap(data, dim: str) -> None:
         "donc non publiable. Échelle fixée à 0–100 % — une échelle ajustée aux "
         "valeurs présentes exagérerait les contrastes."
     )
+    takeaway(
+        [
+            "Une ligne plus claire que les autres désigne un modèle plus fort partout ; "
+            "une colonne claire, une catégorie facile pour tous. Une case isolée ne se "
+            "lit qu'avec son intervalle, visible au survol."
+        ]
+    )
 
 
 def _extremes(data, dim: str) -> None:
@@ -120,3 +127,21 @@ def _extremes(data, dim: str) -> None:
     subset = subset.sort_values("accuracy_pct", ascending=True)
     st.plotly_chart(accuracy_figure(subset, dim), use_container_width=True)
     sample_caption(subset)
+    takeaway(_extremes_lines(subset, dim))
+
+
+def _extremes_lines(subset, dim: str) -> list[str]:
+    """Écart entre la catégorie la mieux et la moins bien réussie."""
+    if len(subset) < 2:
+        return []
+    worst, best = subset.iloc[0], subset.iloc[-1]
+    lines = [
+        f"De **{worst[dim]}** ({worst['accuracy_pct']:.1f} %, hasard "
+        f"{worst['random_baseline_pct']:.1f} %) à **{best[dim]}** "
+        f"({best['accuracy_pct']:.1f} %, hasard {best['random_baseline_pct']:.1f} %), "
+        "l'écart atteint "
+        f"{best['accuracy_pct'] - worst['accuracy_pct']:.1f} pts"
+        + ("." if separable(best, worst) else ", mais reste dans la marge d'erreur.")
+    ]
+    lines.append(chance_verdict(worst, worst[dim]))
+    return lines

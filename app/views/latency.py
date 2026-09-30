@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 import filters
+from charts import takeaway
 from data_access import load
 from theme import color_for, format_family_label
 
@@ -85,6 +86,20 @@ def _distribution(data) -> None:
         legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "x": 0},
     )
     st.plotly_chart(fig, use_container_width=True)
+    takeaway(_distribution_lines(data))
+
+
+def _distribution_lines(data) -> list[str]:
+    """Écart de coût entre la combinaison la plus rapide et la plus lente."""
+    if len(data) < 2:
+        return []
+    fastest, slowest = data.iloc[0], data.iloc[-1]
+    ratio = slowest["median_response_time"] / fastest["median_response_time"]
+    return [
+        f"`{fastest['label']}` répond en {fastest['median_response_time']:.2f} s "
+        f"(médiane), `{slowest['label']}` en {slowest['median_response_time']:.2f} s : "
+        f"un facteur **{ratio:.1f}×**, qui se paie sur chaque question."
+    ]
 
 
 def _per_token(data) -> None:

@@ -200,6 +200,12 @@ il survient après `dbt deps` et `dbt seed` : autant couper l'application d'abor
 - **Les trois formats de tâche ne partagent jamais un classement.** Mettre
   `generation_libre`, `qcm_options` et `qcm_lettre` côte à côte reviendrait à
   déclarer un vainqueur entre trois épreuves différentes.
+- **Une ligne « À retenir » sous chaque graphique**, en une ou deux phrases,
+  pour dire ce qu'il montre et pas seulement comment le lire. Elle est composée à
+  partir des lignes du mart affichées, jamais écrite avec des chiffres en dur :
+  elle suit les filtres et le prochain `make gold`. Un écart entre deux
+  combinaisons n'y est affirmé que si leurs intervalles ne se recouvrent pas, et
+  tout taux cité l'est avec son hasard.
 
 Ces règles sont appliquées par `app/charts.py` plutôt que répétées dans chaque
 page : énoncées six fois à la main, l'une des six finit par en oublier une.

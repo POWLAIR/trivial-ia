@@ -5,7 +5,7 @@ from __future__ import annotations
 import streamlit as st
 
 import filters
-from charts import grouped_accuracy_figure, sample_caption
+from charts import grouped_accuracy_figure, sample_caption, takeaway
 from data_access import load
 from filters import DIFFICULTY_ORDER
 from theme import format_family_label
@@ -21,6 +21,7 @@ def render() -> None:
         filters.empty_state()
         return
 
+    takeaway(_easy_lines(data))
     _inversions(data)
     st.divider()
 
@@ -35,6 +36,22 @@ def render() -> None:
                 use_container_width=True,
             )
             sample_caption(prompt_group)
+
+
+def _easy_lines(data) -> list[str]:
+    """Seule la frontière `easy` / reste semble tenir : on le vérifie ligne à ligne."""
+    combos = list(data.groupby(["model", "prompt_version"], sort=False))
+    easy_first = sum(
+        1
+        for _, rows in combos
+        if (rows["difficulty"] == "easy").any()
+        and rows.loc[rows["accuracy_pct"].idxmax(), "difficulty"] == "easy"
+    )
+    return [
+        f"Les questions `easy` sont les mieux réussies sur **{easy_first} combinaison(s) "
+        f"sur {len(combos)}**. Entre `medium` et `hard`, l'ordre attendu ne tient pas "
+        "toujours : voir ci-dessous."
+    ]
 
 
 def _inversions(data) -> None:

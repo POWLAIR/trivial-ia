@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 import filters
-from charts import accuracy_figure, sample_caption
+from charts import accuracy_figure, chance_verdict, sample_caption, separable, takeaway
 from data_access import load
 from theme import FORMAT_FAMILY_NOTES, color_for, format_family_label
 
@@ -72,6 +72,31 @@ def _ranking(perf) -> None:
         group["label"] = group["model"] + " · " + group["prompt_version"]
         st.plotly_chart(accuracy_figure(group, "label"), use_container_width=True)
         sample_caption(group)
+        takeaway(_ranking_lines(group))
+
+
+def _ranking_lines(group) -> list[str]:
+    """Le meilleur d'un format, et s'il se distingue vraiment du suivant."""
+    best = group.iloc[-1]
+    gap = best["accuracy_pct"] - best["random_baseline_pct"]
+    lines = [
+        f"`{best['label']}` arrive en tête avec **{best['accuracy_pct']:.1f} %**, "
+        f"soit {gap:+.1f} pts par rapport au hasard ({best['random_baseline_pct']:.1f} %)."
+    ]
+    verdict = chance_verdict(best, "cette combinaison")
+    if verdict:
+        lines.append(verdict)
+        return lines
+    if len(group) > 1:
+        second = group.iloc[-2]
+        if separable(best, second):
+            lines.append(f"Son avance sur `{second['label']}` dépasse la marge d'erreur.")
+        else:
+            lines.append(
+                f"Il n'est pas départageable de `{second['label']}` à cet effectif : "
+                "les intervalles de confiance se recouvrent."
+            )
+    return lines
 
 
 def _tradeoff(perf) -> None:
@@ -118,3 +143,26 @@ def _tradeoff(perf) -> None:
         "Couleur : modèle. Forme : format de tâche. En haut à gauche, le meilleur "
         "compromis — précis et rapide."
     )
+    takeaway(_tradeoff_lines(perf))
+
+
+def _tradeoff_lines(perf) -> list[str]:
+    """Par format, ce que coûte en temps le gain de justesse du plus précis."""
+    lines = []
+    for family, group in perf.groupby("format_family", sort=False):
+        best = group.loc[group["accuracy_pct"].idxmax()]
+        fastest = group.loc[group["median_response_time"].idxmin()]
+        if best.name == fastest.name:
+            lines.append(
+                f"{format_family_label(family)} : `{best['model']}` · "
+                f"`{best['prompt_version']}` est à la fois le plus précis et le plus rapide."
+            )
+            continue
+        ratio = best["median_response_time"] / fastest["median_response_time"]
+        lines.append(
+            f"{format_family_label(family)} : le plus précis (`{best['model']}` · "
+            f"`{best['prompt_version']}`) répond **{ratio:.1f}×** plus lentement que "
+            f"le plus rapide (`{fastest['model']}` · `{fastest['prompt_version']}`), pour "
+            f"{best['accuracy_pct'] - fastest['accuracy_pct']:+.1f} pts."
+        )
+    return lines

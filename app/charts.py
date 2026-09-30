@@ -162,6 +162,48 @@ def sample_caption(df: pd.DataFrame, extra: str = "") -> None:
     st.caption(" ".join(part for part in (f"{effectif} par barre.", barres, extra) if part))
 
 
+def separable(a: pd.Series, b: pd.Series) -> bool:
+    """Vrai si les intervalles de confiance de deux taux ne se recouvrent pas.
+
+    En deçà, l'écart peut tenir au seul tirage de l'échantillon : désigner un
+    gagnant serait affirmer ce que les données ne montrent pas.
+    """
+    gap = abs(a["accuracy_pct"] - b["accuracy_pct"])
+    return gap > a["ci95_margin_pct"] + b["ci95_margin_pct"]
+
+
+def chance_verdict(row: pd.Series, subject: str) -> str:
+    """Situe un taux par rapport au hasard, intervalle de confiance compris.
+
+    Trois cas, pas deux : un taux peut être significativement sous le hasard, ce
+    qui ne dit pas la même chose qu'un taux simplement indiscernable du hasard.
+    Chaîne vide si le taux est nettement au-dessus.
+    """
+    low = row["accuracy_pct"] - row["ci95_margin_pct"]
+    high = row["accuracy_pct"] + row["ci95_margin_pct"]
+    baseline = row["random_baseline_pct"]
+    if high < baseline:
+        return (
+            f"Sur {subject}, le modèle fait nettement **moins bien que le hasard** "
+            f"({baseline:.1f} %)."
+        )
+    if low <= baseline:
+        return f"Sur {subject}, le modèle ne se distingue pas du hasard ({baseline:.1f} %)."
+    return ""
+
+
+def takeaway(lines: list[str]) -> None:
+    """Une ou deux phrases qui disent ce que montre le graphique au-dessus.
+
+    Les phrases sont composées par l'appelant à partir des lignes du mart
+    affichées, jamais écrites avec des chiffres en dur : elles suivent ainsi les
+    filtres et le prochain `make gold`.
+    """
+    lines = [line for line in lines if line]
+    if lines:
+        st.markdown("**À retenir** — " + " ".join(lines))
+
+
 def warn_small_samples(df: pd.DataFrame) -> pd.DataFrame:
     """Écarte les lignes sous le seuil d'effectif, et le dit.
 

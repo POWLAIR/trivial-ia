@@ -11,6 +11,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 import filters
+from charts import takeaway
 from data_access import load
 from theme import MIN_SAMPLE, color_for, format_family_label
 
@@ -176,3 +177,15 @@ def _agreement() -> None:
         "par dbt. Un groupe très « raté par tous » mérite d'être inspecté dans "
         "l'explorateur avant d'en conclure quoi que ce soit sur les modèles."
     )
+    takeaway(_agreement_lines(subset))
+
+
+def _agreement_lines(subset) -> list[str]:
+    """Les groupes où les modèles s'accordent le plus, dans l'échec et la réussite."""
+    missed = subset.loc[subset["pct_missed_by_all"].idxmax()]
+    solved = subset.loc[subset["pct_solved_by_all"].idxmax()]
+    return [
+        f"**{missed['category_group']}** est le groupe le plus raté par tous "
+        f"({missed['pct_missed_by_all']:.1f} % des questions), **{solved['category_group']}** "
+        f"le plus réussi par tous ({solved['pct_solved_by_all']:.1f} %)."
+    ]
